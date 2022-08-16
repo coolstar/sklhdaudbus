@@ -1,0 +1,77 @@
+;/*++
+;
+;Copyright (c) CoolStar.  All rights reserved.
+;
+;Module Name:
+;    sklhdaudbus.inf
+;
+;Abstract:
+;    INF file for installing the SKL HD Aud Bus Driver
+;
+;
+;--*/
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider    = CoolStar
+DriverVer   = 8/15/2022,1.0.0
+CatalogFile = sklhdaudbus.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; ================= Class section =====================
+
+[SourceDisksNames]
+1 = %DiskId1%,,,""
+
+[SourceDisksFiles]
+sklhdaudbus.sys  = 1,,
+
+;*****************************************
+; SklHDAudBus  Install Section
+;*****************************************
+
+[Manufacturer]
+%StdMfg%=Standard,NT$ARCH$
+
+; Decorated model section take precedence over undecorated 
+; ones on XP and later.
+[Standard.NT$ARCH$]
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_15AD&DEV_1977&CC_0403 ;Test in VMWare
+
+[SklHDAudBus_Device.NT]
+CopyFiles=Drivers_Dir
+
+[SklHDAudBus_Device.NT.HW]
+AddReg=SklHDAudBus_AddReg
+
+[Drivers_Dir]
+sklhdaudbus.sys
+
+[SklHDAudBus_AddReg]
+; Set to 1 to connect the first interrupt resource found, 0 to leave disconnected
+HKR,Settings,"ConnectInterrupt",0x00010001,0
+
+;-------------- Service installation
+[SklHDAudBus_Device.NT.Services]
+AddService = SklHDAudBus,%SPSVCINST_ASSOCSERVICE%, SklHDAudBus_Service_Inst
+
+; -------------- SklHDAudBus driver install sections
+[SklHDAudBus_Service_Inst]
+DisplayName    = %SklHDAudBus.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START 
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\sklhdaudbus.sys
+LoadOrderGroup = Base
+
+[Strings]
+SPSVCINST_ASSOCSERVICE= 0x00000002
+StdMfg                 = "CoolStar"
+DiskId1                = "CoolStar HD Audio Installation Disk #1"
+SklHDAudBus.DeviceDesc = "CoolStar HD Audio"
+SklHDAudBus.SVCDESC    = "CoolStar HD Audio Service"
