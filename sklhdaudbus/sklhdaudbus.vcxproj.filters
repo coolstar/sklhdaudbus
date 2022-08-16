@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Inf Include="sklhdaudbus.inf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{4d2da254-d169-4d8e-a302-5e9e489bdbb1}</UniqueIdentifier>
+      <Extensions>*.c</Extensions>
+    </Filter>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{02a39469-356c-43ce-b243-807bdac88792}</UniqueIdentifier>
+      <Extensions>*.h</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sklhdaudbus.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="fdo.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="driver.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="trace.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="fdo.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -6,53 +6,11 @@
 #pragma warning(disable:4214)  // suppress bit field types other than int warning
 #include <initguid.h>
 #include <wdm.h>
-
-#pragma warning(default:4200)
-#pragma warning(default:4201)
-#pragma warning(default:4214)
 #include <wdf.h>
 
-#pragma warning(disable:4201)  // suppress nameless struct/union warning
-#pragma warning(disable:4214)  // suppress bit field types other than int warning
-#include <hidport.h>
+#include "fdo.h"
 
-//
-// String definitions
-//
-
-#define DRIVERNAME                 "sklhdaudbus.sys: "
-
-#define SKLHDAUDBUS_POOL_TAG            (ULONG) 'CREC'
-
-#define true 1
-#define false 0
-
-typedef struct _SKLHDAUDBUS_CONTEXT
-{
-
-	//
-	// Handle back to the WDFDEVICE
-	//
-
-	WDFDEVICE FxDevice;
-
-    WDFWAITLOCK EcLock;
-
-} SKLHDAUDBUS_CONTEXT, *PSKLHDAUDBUS_CONTEXT;
-
-WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(SKLHDAUDBUS_CONTEXT, GetDeviceContext)
-
-//
-// Function definitions
-//
-
-DRIVER_INITIALIZE DriverEntry;
-
-EVT_WDF_DRIVER_UNLOAD SklHdAudBusDriverUnload;
-
-EVT_WDF_DRIVER_DEVICE_ADD SklHdAudBusEvtDeviceAdd;
-
-EVT_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL SklHdAudBusEvtInternalDeviceControl;
+#define DRIVERNAME "sklhdaudbus.sys: "
 
 //
 // Helper macros
@@ -66,7 +24,10 @@ EVT_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL SklHdAudBusEvtInternalDeviceControl;
 #define DBG_PNP   2
 #define DBG_IOCTL 4
 
-#if 0
+static ULONG SklHdAudBusDebugLevel = 100;
+static ULONG SklHdAudBusDebugCatagories = DBG_INIT || DBG_PNP || DBG_IOCTL;
+
+#if 1
 #define SklHdAudBusPrint(dbglevel, dbgcatagory, fmt, ...) {          \
     if (SklHdAudBusDebugLevel >= dbglevel &&                         \
         (SklHdAudBusDebugCatagories && dbgcatagory))                 \

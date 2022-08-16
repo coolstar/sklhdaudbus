@@ -147,10 +147,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h" />
-    <ClInclude Include="sklhdaudbus.h" />
+    <ClInclude Include="fdo.h" />
     <ClInclude Include="trace.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="fdo.c" />
     <ClCompile Include="sklhdaudbus.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
