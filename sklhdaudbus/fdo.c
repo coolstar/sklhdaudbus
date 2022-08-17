@@ -128,6 +128,8 @@ Fdo_EvtDevicePrepareHardware(
     _In_ WDFCMRESLIST ResourcesTranslated
 )
 {
+    BOOLEAN fBar0Found = FALSE;
+    BOOLEAN fBar4Found = FALSE;
     NTSTATUS status;
     PFDO_CONTEXT fdoCtx;
     ULONG resourceCount;
@@ -138,7 +140,50 @@ Fdo_EvtDevicePrepareHardware(
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
-    //TODO: MAP PCI Bars + IRQ
+    for (ULONG i = 0; i < resourceCount; i++)
+    {
+        PCM_PARTIAL_RESOURCE_DESCRIPTOR pDescriptor;
+        UCHAR Class;
+        UCHAR Type;
+
+        pDescriptor = WdfCmResourceListGetDescriptor(
+            ResourcesTranslated, i);
+
+        switch (pDescriptor->Type)
+        {
+        case CmResourceTypeMemory:
+            //Look for BAR0 and BAR4
+            if (fBar0Found == FALSE) {
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Found BAR0: 0x%llx (size 0x%lx)\n", pDescriptor->u.Memory.Start.QuadPart, pDescriptor->u.Memory.Length);
+
+                fdoCtx->m_BAR0.Base.Base = MmMapIoSpace(pDescriptor->u.Memory.Start, pDescriptor->u.Memory.Length, MmNonCached);
+                fdoCtx->m_BAR0.Len = pDescriptor->u.Memory.Length;
+
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Mapped to %p\n", fdoCtx->m_BAR0.Base.baseptr);
+                fBar0Found = TRUE;
+            }
+            else if (fBar4Found == FALSE) {
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Found BAR4: 0x%llx (size 0x%lx)\n", pDescriptor->u.Memory.Start.QuadPart, pDescriptor->u.Memory.Length);
+
+                fdoCtx->m_BAR0.Base.Base = MmMapIoSpace(pDescriptor->u.Memory.Start, pDescriptor->u.Memory.Length, MmNonCached);
+                fdoCtx->m_BAR0.Len = pDescriptor->u.Memory.Length;
+
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Mapped to %p\n", fdoCtx->m_BAR0.Base.baseptr);
+                fBar4Found = TRUE;
+            }
+            break;
+        }
+    }
+
+    if (fdoCtx->m_BAR0.Base.Base == NULL) {
+        status = STATUS_NOT_FOUND; //BAR0 is required
+        return status;
+    }
+
     status = STATUS_SUCCESS;
 
     return status;
@@ -158,6 +203,11 @@ Fdo_EvtDeviceReleaseHardware(
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
+
+    if (fdoCtx->m_BAR0.Base.Base)
+        MmUnmapIoSpace(fdoCtx->m_BAR0.Base.Base, fdoCtx->m_BAR0.Len);
+    if (fdoCtx->m_BAR4.Base.Base)
+        MmUnmapIoSpace(fdoCtx->m_BAR4.Base.Base, fdoCtx->m_BAR4.Len);
 
     return STATUS_SUCCESS;
 }
