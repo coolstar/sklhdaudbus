@@ -20,6 +20,9 @@
     <ClCompile Include="fdo.c">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="buspdo.c">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h">
@@ -29,6 +32,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="fdo.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="buspdo.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -7,10 +7,14 @@
 #include <initguid.h>
 #include <wdm.h>
 #include <wdf.h>
+#include <ntintsafe.h>
+#include <ntstrsafe.h>
 
 #include "fdo.h"
+#include "buspdo.h"
 
 #define DRIVERNAME "sklhdaudbus.sys: "
+#define SKLHDAUDBUS_POOL_TAG 'SADH'
 
 //
 // Helper macros

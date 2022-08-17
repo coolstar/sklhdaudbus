@@ -7,6 +7,15 @@ SklHdAudBusEvtDeviceAdd(
 )
 {
 	NTSTATUS status;
+
+	//
+	// Initialize all the properties specific to the device.
+	// Framework has default values for the one that are not
+	// set explicitly here. So please read the doc and make sure
+	// you are okay with the defaults.
+	//
+	WdfDeviceInitSetDeviceType(DeviceInit, FILE_DEVICE_BUS_EXTENDER);
+
 	status = Fdo_Create(DeviceInit);
 	return status;
 }

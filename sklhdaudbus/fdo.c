@@ -14,6 +14,7 @@ Fdo_Create(
 	_Inout_ PWDFDEVICE_INIT DeviceInit
 )
 {
+    WDF_CHILD_LIST_CONFIG      config;
 	WDF_OBJECT_ATTRIBUTES attributes;
 	WDF_PNPPOWER_EVENT_CALLBACKS pnpPowerCallbacks;
     PFDO_CONTEXT fdoCtx;
@@ -31,6 +32,57 @@ Fdo_Create(
     WdfDeviceInitSetPnpPowerEventCallbacks(DeviceInit, &pnpPowerCallbacks);
 
     WdfDeviceInitSetPowerPageable(DeviceInit);
+
+    //
+    // WDF_ DEVICE_LIST_CONFIG describes how the framework should handle
+    // dynamic child enumeration on behalf of the driver writer.
+    // Since we are a bus driver, we need to specify identification description
+    // for our child devices. This description will serve as the identity of our
+    // child device. Since the description is opaque to the framework, we
+    // have to provide bunch of callbacks to compare, copy, or free
+    // any other resources associated with the description.
+    //
+    WDF_CHILD_LIST_CONFIG_INIT(&config,
+        sizeof(PDO_IDENTIFICATION_DESCRIPTION),
+        Bus_EvtDeviceListCreatePdo // callback to create a child device.
+    );
+
+    //
+    // This function pointer will be called when the framework needs to copy a
+    // identification description from one location to another.  An implementation
+    // of this function is only necessary if the description contains description
+    // relative pointer values (like  LIST_ENTRY for instance) .
+    // If set to NULL, the framework will use RtlCopyMemory to copy an identification .
+    // description. In this sample, it's not required to provide these callbacks.
+    // they are added just for illustration.
+    //
+    config.EvtChildListIdentificationDescriptionDuplicate =
+        Bus_EvtChildListIdentificationDescriptionDuplicate;
+
+    //
+    // This function pointer will be called when the framework needs to compare
+    // two identificaiton descriptions.  If left NULL a call to RtlCompareMemory
+    // will be used to compare two identificaiton descriptions.
+    //
+    config.EvtChildListIdentificationDescriptionCompare =
+        Bus_EvtChildListIdentificationDescriptionCompare;
+    //
+    // This function pointer will be called when the framework needs to free a
+    // identification description.  An implementation of this function is only
+    // necessary if the description contains dynamically allocated memory
+    // (by the driver writer) that needs to be freed. The actual identification
+    // description pointer itself will be freed by the framework.
+    //
+    config.EvtChildListIdentificationDescriptionCleanup =
+        Bus_EvtChildListIdentificationDescriptionCleanup;
+
+    //
+    // Tell the framework to use the built-in childlist to track the state
+    // of the device based on the configuration we just created.
+    //
+    WdfFdoInitSetDefaultChildListConfig(DeviceInit,
+        &config,
+        WDF_NO_OBJECT_ATTRIBUTES);
 
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, FDO_CONTEXT);
     status = WdfDeviceCreate(&DeviceInit, &attributes, &wdfDevice);
@@ -125,6 +177,43 @@ Fdo_EvtDeviceD0Entry(
         "%s\n", __func__);
 
     status = STATUS_SUCCESS;
+
+    WdfChildListBeginScan(WdfFdoGetDefaultChildList(Device));
+
+    {
+        PDO_IDENTIFICATION_DESCRIPTION description;
+        //
+        // Initialize the description with the information about the newly
+        // plugged in device.
+        //
+        WDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER_INIT(
+            &description.Header,
+            sizeof(description)
+        );
+
+        description.FuncId = 1;
+        description.VenId = 0x15AD;
+        description.DevId = 0x1975;
+        description.SubsysId = 0x15AD1975;
+        description.RevId = 0x1001;
+
+        //
+        // Call the framework to add this child to the childlist. This call
+        // will internaly call our DescriptionCompare callback to check
+        // whether this device is a new device or existing device. If
+        // it's a new device, the framework will call DescriptionDuplicate to create
+        // a copy of this description in nonpaged pool.
+        // The actual creation of the child device will happen when the framework
+        // receives QUERY_DEVICE_RELATION request from the PNP manager in
+        // response to InvalidateDeviceRelations call made as part of adding
+        // a new child.
+        //
+        status = WdfChildListAddOrUpdateChildDescriptionAsPresent(
+            WdfFdoGetDefaultChildList(Device), &description.Header,
+            NULL); // AddressDescription
+    }
+
+    WdfChildListEndScan(WdfFdoGetDefaultChildList(Device));
 
     return status;
 }
