@@ -222,15 +222,15 @@ Fdo_EvtDevicePrepareHardware(
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "chipset global capabilities = 0x%x\n", gcap);
 
-    UINT32 captureStreams = (gcap >> 8) & 0x0f;
-    UINT32 playbackSteams = (gcap >> 12) & 0x0f;
+    fdoCtx->captureStreams = (gcap >> 8) & 0x0f;
+    fdoCtx->playbackStreams = (gcap >> 12) & 0x0f;
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "streams (cap %d, playback %d)\n", captureStreams, playbackSteams);
+        "streams (cap %d, playback %d)\n", fdoCtx->captureStreams, fdoCtx->playbackStreams);
 
     fdoCtx->captureIndexOff = 0;
-    fdoCtx->playbackIndexOff = captureStreams;
-    fdoCtx->numStreams = captureStreams + playbackSteams;
+    fdoCtx->playbackIndexOff = fdoCtx->captureStreams;
+    fdoCtx->numStreams = fdoCtx->captureStreams + fdoCtx->playbackStreams;
 
     fdoCtx->streams = ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
     if (!fdoCtx->streams) {
@@ -245,7 +245,7 @@ Fdo_EvtDevicePrepareHardware(
 
         for (i = 0; i < fdoCtx->numStreams; i++) {
             int dir = (i >= fdoCtx->captureIndexOff &&
-                i < fdoCtx->captureIndexOff + captureStreams);
+                i < fdoCtx->captureIndexOff + fdoCtx->captureStreams);
             /* stream tag must be unique throughout
              * the stream direction group,
              * valid values 1...15

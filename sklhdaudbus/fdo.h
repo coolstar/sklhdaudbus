@@ -57,6 +57,8 @@ typedef struct _FDO_CONTEXT
 
     UINT32 captureIndexOff;
     UINT32 playbackIndexOff;
+    UINT32 captureStreams;
+    UINT32 playbackStreams;
     UINT32 numStreams;
 
     PHDAC_STREAM streams;
