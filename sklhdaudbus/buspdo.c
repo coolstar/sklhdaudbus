@@ -49,11 +49,7 @@ Return Value:
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
-    dst->FuncId = src->FuncId;
-    dst->VenId = src->VenId;
-    dst->DevId = src->DevId;
-    dst->SubsysId = src->SubsysId;
-    dst->RevId = src->RevId;
+    RtlCopyMemory(&dst->CodecIds, &src->CodecIds, sizeof(dst->CodecIds));
 
     return STATUS_SUCCESS;
 }
@@ -93,11 +89,7 @@ Return Value:
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
-    return (lhs->FuncId == rhs->FuncId &&
-        lhs->VenId == rhs->VenId &&
-        lhs->DevId == rhs->DevId &&
-        lhs->SubsysId == rhs->SubsysId &&
-        lhs->RevId == rhs->RevId);
+    return RtlCompareMemory(&lhs->CodecIds, &rhs->CodecIds, sizeof(lhs->CodecIds)) == 0;
 }
 
 VOID
@@ -197,7 +189,7 @@ Bus_CreatePdo(
     // Provide DeviceID, HardwareIDs, CompatibleIDs and InstanceId
     //
     status = RtlUnicodeStringPrintf(&deviceId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X&SUBSYS_%08X&REV_%04X",
-        prefix, Desc->FuncId, Desc->VenId, Desc->DevId, Desc->SubsysId, Desc->RevId);
+        prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.SubsysId, Desc->CodecIds.RevId);
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -217,7 +209,7 @@ Bus_CreatePdo(
 
     //Add second hardware ID without Rev
     status = RtlUnicodeStringPrintf(&deviceId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X&SUBSYS_%08X",
-        prefix, Desc->FuncId, Desc->VenId, Desc->DevId, Desc->SubsysId);
+        prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.SubsysId);
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -229,10 +221,30 @@ Bus_CreatePdo(
 
     //Add Compatible Ids
     {
-        //Add 2 ctlr dev ids
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X&DEV_%04X&REV_%04X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&VEN_%04X&DEV_%04X&REV_%04X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
 
         status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X&REV_%04X",
-            prefix, Desc->FuncId, Desc->VenId, Desc->DevId, Desc->RevId);
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
         if (!NT_SUCCESS(status)) {
             return status;
         }
@@ -242,10 +254,30 @@ Bus_CreatePdo(
             return status;
         }
 
-        //Add 2 ctlr dev ids
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X&DEV_%04X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&VEN_%04X&DEV_%04X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
 
         status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X",
-            prefix, Desc->FuncId, Desc->VenId, Desc->DevId);
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
         if (!NT_SUCCESS(status)) {
             return status;
         }
@@ -255,10 +287,30 @@ Bus_CreatePdo(
             return status;
         }
 
-        //Add 2 ctlr dev ids
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&VEN_%04X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
 
         status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&VEN_%04X",
-            prefix, Desc->FuncId, Desc->VenId);
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId);
         if (!NT_SUCCESS(status)) {
             return status;
         }
@@ -268,10 +320,30 @@ Bus_CreatePdo(
             return status;
         }
 
-        //Add 2 ctlr dev ids
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X",
+            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAddCompatibleID(DeviceInit, &compatId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
 
         status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X",
-            prefix, Desc->FuncId);
+            prefix, Desc->CodecIds.FuncId);
         if (!NT_SUCCESS(status)) {
             return status;
         }
@@ -282,7 +354,7 @@ Bus_CreatePdo(
         }
     }
 
-    status = RtlUnicodeStringPrintf(&buffer, L"%02d", Desc->Idx);
+    status = RtlUnicodeStringPrintf(&buffer, L"%02d", Desc->CodecIds.Idx);
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -341,12 +413,7 @@ Bus_CreatePdo(
     //
     pdoData = PdoGetData(hChild);
 
-    pdoData->Idx = 0;
-    pdoData->FuncId = Desc->FuncId;
-    pdoData->VenId = Desc->VenId;
-    pdoData->DevId = Desc->DevId;
-    pdoData->SubsysId = Desc->SubsysId;
-    pdoData->RevId = Desc->RevId;
+    RtlCopyMemory(&pdoData->CodecIds, &Desc->CodecIds, sizeof(Desc->CodecIds));
 
     //
     // Set some properties for the child device.
@@ -356,8 +423,8 @@ Bus_CreatePdo(
     pnpCaps.EjectSupported = WdfFalse;
     pnpCaps.SurpriseRemovalOK = WdfFalse;
 
-    pnpCaps.Address = Desc->Idx;
-    pnpCaps.UINumber = Desc->Idx;
+    pnpCaps.Address = Desc->CodecIds.Idx;
+    pnpCaps.UINumber = Desc->CodecIds.Idx;
 
     WdfDeviceSetPnpCapabilities(hChild, &pnpCaps);
 

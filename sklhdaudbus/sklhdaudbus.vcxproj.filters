@@ -23,6 +23,9 @@
     <ClCompile Include="buspdo.c">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="hdac_controller.c">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h">
@@ -35,6 +38,15 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="buspdo.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="hda_registers.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="hdac_controller.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="hda_verbs.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
