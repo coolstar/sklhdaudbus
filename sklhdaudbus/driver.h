@@ -80,15 +80,25 @@ static void update_pci_byte(PBUS_INTERFACE_STANDARD pciInterface, UINT reg, BYTE
 	pci_write_cfg_byte(pciInterface, reg, data);
 }
 
-#define hda_read8(ctx, reg) read16(ctx->m_BAR0.Base.baseptr + HDA_REG_##reg)
-#define hda_write8(ctx, reg, data) write16(ctx->m_BAR0.Base.baseptr + HDA_REG_##reg, data)
+#define hda_read8(ctx, reg) read8((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg)
+#define hda_write8(ctx, reg, data) write8((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg, data)
 #define hda_update8(ctx, reg, mask, val) hda_write8(ctx, reg, (hda_read8(ctx, reg) & ~(mask)) | (val))
-#define hda_read16(ctx, reg) read16(ctx->m_BAR0.Base.baseptr + HDA_REG_##reg)
-#define hda_write16(ctx, reg, data) write16(ctx->m_BAR0.Base.baseptr + HDA_REG_##reg, data)
+#define hda_read16(ctx, reg) read16((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg)
+#define hda_write16(ctx, reg, data) write16((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg, data)
 #define hda_update16(ctx, reg, mask, val) hda_write16(ctx, reg, (hda_read16(ctx, reg) & ~(mask)) | (val))
-#define hda_read32(ctx, reg) read32(ctx->m_BAR0.Base.baseptr + HDA_REG_##reg)
-#define hda_write32(ctx, reg, data) write32(ctx->m_BAR0.Base.baseptr + HDA_REG_##reg, data)
+#define hda_read32(ctx, reg) read32((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg)
+#define hda_write32(ctx, reg, data) write32((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg, data)
 #define hda_update32(ctx, reg, mask, val) hda_write32(ctx, reg, (hda_read32(ctx, reg) & ~(mask)) | (val))
+
+#define stream_read8(ctx, reg) read8((ctx)->sdAddr + HDA_REG_##reg)
+#define stream_write8(ctx, reg, data) write8((ctx)->sdAddr + HDA_REG_##reg, data)
+#define stream_update8(ctx, reg, mask, val) stream_write8(ctx, reg, (stream_read8(ctx, reg) & ~(mask)) | (val))
+#define stream_read16(ctx, reg) read16((ctx)->sdAddr + HDA_REG_##reg)
+#define stream_write16(ctx, reg, data) write16((ctx)->sdAddr + HDA_REG_##reg, data)
+#define stream_update16(ctx, reg, mask, val) stream_write16(ctx, reg, (stream_read16(ctx, reg) & ~(mask)) | (val))
+#define stream_read32(ctx, reg) read32((ctx)->sdAddr + HDA_REG_##reg)
+#define stream_write32(ctx, reg, data) write32((ctx)->sdAddr + HDA_REG_##reg, data)
+#define stream_update32(ctx, reg, mask, val) stream_write32(ctx, reg, (stream_read32(ctx, reg) & ~(mask)) | (val))
 
 #define IS_BXT(ven, dev) (ven == VEN_INTEL && dev == 0x5a98)
 

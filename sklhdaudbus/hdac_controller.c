@@ -319,7 +319,10 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 	{
 		//Clear Interrupts
 
-		//TODO: Clear stream status
+		//Clear stream status
+		for (int i = 0; i < fdoCtx->numStreams; i++) {
+			stream_write8(&fdoCtx->streams[i], SD_STS, SD_INT_MASK);
+		}
 
 		//Clear STATESTS
 		hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);

@@ -232,6 +232,12 @@ Fdo_EvtDevicePrepareHardware(
     fdoCtx->playbackIndexOff = captureStreams;
     fdoCtx->numStreams = captureStreams + playbackSteams;
 
+    fdoCtx->streams = ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
+    if (!fdoCtx->streams) {
+        return STATUS_NO_MEMORY;
+    }
+    RtlZeroMemory(fdoCtx->streams, sizeof(HDAC_STREAM) * fdoCtx->numStreams);
+
     //Init Streams
     {
         UINT32 i;
@@ -246,6 +252,19 @@ Fdo_EvtDevicePrepareHardware(
              * use separate stream tag
              */
             int tag = ++streamTags[dir];
+
+            {
+                PHDAC_STREAM stream = &fdoCtx->streams[i];
+                stream->FdoContext = fdoCtx;
+                /* offset: SDI0=0x80, SDI1=0xa0, ... SDO3=0x160 */
+                stream->sdAddr = fdoCtx->m_BAR0.Base.baseptr + (0x20 * i + 0x80);
+                /* int mask: SDI0=0x01, SDI1=0x02, ... SDO3=0x80 */
+                stream->int_sta_mask = 1 << i;
+                stream->idx = i;
+                stream->direction = dir;
+                stream->streamTag = tag;
+            }
+
             SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                 "Stream tag (idx %d): %d\n", i, tag);
         }
@@ -293,6 +312,9 @@ Fdo_EvtDeviceReleaseHardware(
         MmFreeContiguousMemory(fdoCtx->posbuf);
     if (fdoCtx->rb)
         MmFreeContiguousMemory(fdoCtx->rb);
+
+    if (fdoCtx->streams)
+        ExFreePoolWithTag(fdoCtx->streams, SKLHDAUDBUS_POOL_TAG);
 
     if (fdoCtx->m_BAR0.Base.Base)
         MmUnmapIoSpace(fdoCtx->m_BAR0.Base.Base, fdoCtx->m_BAR0.Len);

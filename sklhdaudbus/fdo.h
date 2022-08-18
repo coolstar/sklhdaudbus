@@ -14,6 +14,27 @@ typedef struct _PCI_BAR {
 #define HDA_UNSOL_QUEUE_SIZE	64
 #define HDA_MAX_CODECS		8	/* limit by controller side */
 
+typedef struct _FDO_CONTEXT;
+typedef struct _HDAC_STREAM {
+    struct _FDO_CONTEXT* FdoContext;
+    PMDL mdlBuf;
+    UINT32* posbuf;
+
+    int direction;
+
+    UINT32 bufSz;
+    UINT32 periodBytes;
+    UINT32 fifoSize;
+
+    UINT8* sdAddr;
+    UINT32 int_sta_mask;
+
+    UINT8 streamTag;
+    UINT8 idx;
+
+    BOOLEAN running, prepared;
+} HDAC_STREAM, *PHDAC_STREAM;
+
 typedef struct _HDAC_RB {
     UINT32 *buf;
     PHYSICAL_ADDRESS addr;
@@ -37,6 +58,8 @@ typedef struct _FDO_CONTEXT
     UINT32 captureIndexOff;
     UINT32 playbackIndexOff;
     UINT32 numStreams;
+
+    PHDAC_STREAM streams;
 
     //bit flags of detected codecs
     UINT16 codecMask;
