@@ -167,6 +167,7 @@ Bus_CreatePdo(
     NTSTATUS                    status;
     PPDO_DEVICE_DATA            pdoData = NULL;
     WDFDEVICE                   hChild = NULL;
+    WDF_QUERY_INTERFACE_CONFIG  qiConfig;
     WDF_OBJECT_ATTRIBUTES       pdoAttributes;
     WDF_DEVICE_PNP_CAPABILITIES pnpCaps;
     WDF_DEVICE_POWER_CAPABILITIES powerCaps;
@@ -183,7 +184,7 @@ Bus_CreatePdo(
     //
     WdfDeviceInitSetDeviceType(DeviceInit, FILE_DEVICE_SOUND);
 
-    PWCHAR prefix = L"CSAUDIO";
+    PWCHAR prefix = L"HDAUDIO";
 
     //
     // Provide DeviceID, HardwareIDs, CompatibleIDs and InstanceId
@@ -444,6 +445,22 @@ Bus_CreatePdo(
     WdfDeviceSetPowerCapabilities(hChild, &powerCaps);
 
     //TODO: Add HD Audio Interfaces
+
+    HDAUDIO_BUS_INTERFACE busInterface = HDA_BusInterface(pdoData);
+
+    WDF_QUERY_INTERFACE_CONFIG_INIT(&qiConfig,
+        (PINTERFACE)&busInterface,
+        &GUID_HDAUDIO_BUS_INTERFACE,
+        NULL);
+
+    status = WdfDeviceAddQueryInterface(hChild, &qiConfig);
+
+    HDAUDIO_BUS_INTERFACE_V2 busInterface2 = HDA_BusInterfaceV2(pdoData);
+    WDF_QUERY_INTERFACE_CONFIG_INIT(&qiConfig,
+        (PINTERFACE)&busInterface2,
+        &GUID_HDAUDIO_BUS_INTERFACE_V2,
+        NULL);
+    status = WdfDeviceAddQueryInterface(hChild, &qiConfig);
 
     return status;
 }

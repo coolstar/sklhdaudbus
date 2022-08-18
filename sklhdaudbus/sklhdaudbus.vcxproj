@@ -152,12 +152,14 @@
     <ClInclude Include="hdac_controller.h" />
     <ClInclude Include="hda_registers.h" />
     <ClInclude Include="hda_verbs.h" />
+    <ClInclude Include="regfuncs.h" />
     <ClInclude Include="trace.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="buspdo.c" />
     <ClCompile Include="fdo.c" />
     <ClCompile Include="hdac_controller.c" />
+    <ClCompile Include="hdaudio.c" />
     <ClCompile Include="sklhdaudbus.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
