@@ -4,7 +4,8 @@
 #define MAX_INSTANCE_ID_LEN 80
 
 typedef struct _CODEC_IDS {
-    UINT8 Idx;
+    UCHAR CodecAddress;
+    UCHAR FunctionGroupStartNode;
 
     UINT16 CtlrDevId;
     UINT16 CtlrVenId;
@@ -20,6 +21,8 @@ typedef struct _PDO_IDENTIFICATION_DESCRIPTION
 {
     WDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER Header; // should contain this header
 
+    PFDO_CONTEXT FdoContext;
+
     CODEC_IDS CodecIds;
 
 } PDO_IDENTIFICATION_DESCRIPTION, * PPDO_IDENTIFICATION_DESCRIPTION;
@@ -29,6 +32,8 @@ typedef struct _PDO_IDENTIFICATION_DESCRIPTION
 //
 typedef struct _PDO_DEVICE_DATA
 {
+    PFDO_CONTEXT FdoContext;
+
     CODEC_IDS CodecIds;
 
 } PDO_DEVICE_DATA, * PPDO_DEVICE_DATA;

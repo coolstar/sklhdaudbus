@@ -423,9 +423,6 @@ Fdo_EvtDeviceSelfManagedIoInit(
         if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) {
             continue;
         }
-        if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_SUBSYSTEM_ID, &subsysId))) {
-            continue;
-        }
         if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_REV_ID, &revId))) {
             continue;
         }
@@ -454,14 +451,11 @@ Fdo_EvtDeviceSelfManagedIoInit(
             }
         }
 
-        if (subsysId == -1 || subsysId == 0) {
-            UINT32 cmd = (addr << 28) | (mainFuncGrp << 20) |
-                (AC_VERB_GET_SUBSYSTEM_ID << 8);
-            DbgPrint("Try getting subsystem ID with other method\n");
-            hdac_bus_exec_verb(fdoCtx, addr, cmd, &subsysId);
-        }
+        UINT32 cmd = (addr << 28) | (mainFuncGrp << 20) |
+            (AC_VERB_GET_SUBSYSTEM_ID << 8);
+        hdac_bus_exec_verb(fdoCtx, addr, cmd, &subsysId);
 
-        DbgPrint("Func 0x%x, vendor: 0x%x, subsys: 0x%x, rev: 0x%x\n", funcType, vendorDevice, subsysId, revId);
+        DbgPrint("Func 0x%x, vendor: 0x%x, subsys: 0x%x, rev: 0x%x, start group 0x%x, node count %d\n", funcType, vendorDevice, subsysId, revId, startID, nodeCount);
 
         PDO_IDENTIFICATION_DESCRIPTION description;
         //
@@ -472,10 +466,14 @@ Fdo_EvtDeviceSelfManagedIoInit(
             sizeof(description)
         );
 
+        description.FdoContext = fdoCtx;
+
         description.CodecIds.CtlrDevId = fdoCtx->devId;
         description.CodecIds.CtlrVenId = fdoCtx->venId;
 
-        description.CodecIds.Idx = addr;
+        description.CodecIds.CodecAddress = addr;
+        description.CodecIds.FunctionGroupStartNode = startID;
+
         description.CodecIds.FuncId = funcType & 0xFF;
         description.CodecIds.VenId = (vendorDevice >> 16) & 0xFFFF;
         description.CodecIds.DevId = vendorDevice & 0xFFFF;

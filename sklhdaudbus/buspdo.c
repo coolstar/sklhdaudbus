@@ -49,6 +49,7 @@ Return Value:
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
+    dst->FdoContext = src->FdoContext;
     RtlCopyMemory(&dst->CodecIds, &src->CodecIds, sizeof(dst->CodecIds));
 
     return STATUS_SUCCESS;
@@ -89,7 +90,7 @@ Return Value:
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
-    return RtlCompareMemory(&lhs->CodecIds, &rhs->CodecIds, sizeof(lhs->CodecIds)) == 0;
+    return lhs->FdoContext == rhs->FdoContext && RtlCompareMemory(&lhs->CodecIds, &rhs->CodecIds, sizeof(lhs->CodecIds)) == 0;
 }
 
 VOID
@@ -355,7 +356,7 @@ Bus_CreatePdo(
         }
     }
 
-    status = RtlUnicodeStringPrintf(&buffer, L"%02d", Desc->CodecIds.Idx);
+    status = RtlUnicodeStringPrintf(&buffer, L"%02d", Desc->CodecIds.CodecAddress);
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -414,6 +415,7 @@ Bus_CreatePdo(
     //
     pdoData = PdoGetData(hChild);
 
+    pdoData->FdoContext = Desc->FdoContext;
     RtlCopyMemory(&pdoData->CodecIds, &Desc->CodecIds, sizeof(Desc->CodecIds));
 
     //
@@ -424,8 +426,8 @@ Bus_CreatePdo(
     pnpCaps.EjectSupported = WdfFalse;
     pnpCaps.SurpriseRemovalOK = WdfFalse;
 
-    pnpCaps.Address = Desc->CodecIds.Idx;
-    pnpCaps.UINumber = Desc->CodecIds.Idx;
+    pnpCaps.Address = Desc->CodecIds.CodecAddress;
+    pnpCaps.UINumber = Desc->CodecIds.CodecAddress;
 
     WdfDeviceSetPnpCapabilities(hChild, &pnpCaps);
 

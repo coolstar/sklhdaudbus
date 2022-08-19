@@ -8,9 +8,43 @@ NTSTATUS HDA_TransferCodecVerbs(
 	_In_opt_ PHDAUDIO_TRANSFER_COMPLETE_CALLBACK Callback,
 	_In_opt_ PVOID Context
 ) {
-	UNREFERENCED_PARAMETER(Context);
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, Count);
+
+	if (!_context)
+		return STATUS_NO_SUCH_DEVICE;
+
+	NTSTATUS status = STATUS_SUCCESS;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	for (ULONG i = 0; i < Count; i++) {
+		PHDAUDIO_CODEC_TRANSFER transfer = &CodecTransfer[i];
+		if ((transfer->Output.Command & 0x70000) == 0x70000) {
+			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Command8: 0x%x (Node: 0x%x, Verb: 0x%x, Parameter: 0x%x)\n", transfer->Output.Command, transfer->Output.Verb8.Node, transfer->Output.Verb8.VerbId, transfer->Output.Verb8.Data);
+		} 
+		else {
+			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Command16: 0x%x (Node: 0x%x, Verb: 0x%x, Parameter: 0x%x)\n", transfer->Output.Command, transfer->Output.Verb16.Node, transfer->Output.Verb16.VerbId, transfer->Output.Verb16.Data);
+		}
+		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
+		UINT32 response = 0;
+		status = hdac_bus_exec_verb(devData->FdoContext, devData->CodecIds.CodecAddress, transfer->Output.Command, &response);
+		transfer->Input.Response = response;
+		if (NT_SUCCESS(status)) {
+			transfer->Input.IsValid = 1;
+			DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
+		} else {
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL, "%s: Verb exec failed! 0x%x\n", __func__, status);
+		}
+	}
+
+	if (Callback) {
+		DbgPrint("Got Callback\n");
+		Callback(CodecTransfer, Context);
+	}
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_AllocateCaptureDmaEngine(
@@ -97,6 +131,7 @@ NTSTATUS HDA_GetLinkPositionRegister(
 	_In_ HANDLE Handle,
 	_Out_ PULONG* Position
 ) {
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
 	return STATUS_NO_SUCH_DEVICE;
 }
 
@@ -132,7 +167,17 @@ NTSTATUS HDA_GetResourceInformation(
 	_Out_ PUCHAR FunctionGroupStartNode
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+	if (!_context)
+		return STATUS_NO_SUCH_DEVICE;
+	
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (CodecAddress)
+		*CodecAddress = devData->CodecIds.CodecAddress;
+	if (FunctionGroupStartNode)
+		*FunctionGroupStartNode = devData->CodecIds.FunctionGroupStartNode;
+
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Addr: %d, Start: %d)!\n", __func__, devData->CodecIds.CodecAddress, devData->CodecIds.FunctionGroupStartNode);
+	return STATUS_SUCCESS;
 }
 
 HDAUDIO_BUS_INTERFACE HDA_BusInterface(PVOID Context) {
@@ -142,11 +187,12 @@ HDAUDIO_BUS_INTERFACE HDA_BusInterface(PVOID Context) {
 	busInterface.Size = sizeof(HDAUDIO_BUS_INTERFACE);
 	busInterface.Version = 0x0100;
 	busInterface.Context = Context;
-	busInterface.InterfaceDereference = WdfDeviceInterfaceReferenceNoOp;
+	busInterface.InterfaceReference = WdfDeviceInterfaceReferenceNoOp;
 	busInterface.InterfaceDereference = WdfDeviceInterfaceDereferenceNoOp;
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
 	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
 	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;
 	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer;
 	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer;
 	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;
@@ -211,11 +257,12 @@ HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
 	busInterface.Size = sizeof(HDAUDIO_BUS_INTERFACE_V2);
 	busInterface.Version = 0x0100;
 	busInterface.Context = Context;
-	busInterface.InterfaceDereference = WdfDeviceInterfaceReferenceNoOp;
+	busInterface.InterfaceReference = WdfDeviceInterfaceReferenceNoOp;
 	busInterface.InterfaceDereference = WdfDeviceInterfaceDereferenceNoOp;
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
 	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
 	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;
 	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer;
 	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer;
 	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;

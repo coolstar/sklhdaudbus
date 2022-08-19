@@ -215,8 +215,8 @@ NTSTATUS hdac_bus_get_response(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32* res) {
 	for (ULONG loopcounter = 0; ; loopcounter++) {
 		if (!fdoCtx->rirb.cmds[addr]) {
 			if (res) {
-				DbgPrint("Read Response\n");
 				*res = fdoCtx->rirb.res[addr]; //the last value
+				DbgPrint("Read Response 0x%x\n", *res);
 			}
 			return STATUS_SUCCESS;
 		}
