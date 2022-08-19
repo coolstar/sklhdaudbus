@@ -142,6 +142,24 @@ NTSTATUS HDA_RegisterEventCallback(
 	_Out_ PUCHAR Tag
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
+
+	if (!_context)
+		return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	for (int i = 0; i < MAX_UNSOLICIT_CALLBACKS; i++) {
+		if (!devData->unsolitCallbacks[i].inUse) {
+			if (Tag)
+				*Tag = i;
+
+			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Allocated tag %d!\n", __func__, i);
+			devData->unsolitCallbacks[i].inUse = TRUE;
+			devData->unsolitCallbacks[i].Context = Context;
+			devData->unsolitCallbacks[i].Routine = Routine;
+			return STATUS_SUCCESS;
+		}
+	}
+
 	return STATUS_NO_SUCH_DEVICE;
 }
 
@@ -150,7 +168,21 @@ NTSTATUS HDA_UnregisterEventCallback(
 	_In_ UCHAR Tag
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	if (!_context)
+		return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->unsolitCallbacks[Tag].inUse) {
+		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Not registered!\n", __func__);
+		return STATUS_NOT_FOUND;
+	}
+
+	devData->unsolitCallbacks[Tag].Routine = NULL;
+	devData->unsolitCallbacks[Tag].Context = NULL;
+	devData->unsolitCallbacks[Tag].inUse = FALSE;
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_GetDeviceInformation(

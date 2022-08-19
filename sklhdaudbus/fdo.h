@@ -14,7 +14,7 @@ typedef struct _PCI_BAR {
 #define HDA_UNSOL_QUEUE_SIZE	64
 #define HDA_MAX_CODECS		8	/* limit by controller side */
 
-typedef struct _FDO_CONTEXT;
+struct _FDO_CONTEXT;
 typedef struct _HDAC_STREAM {
     struct _FDO_CONTEXT* FdoContext;
     PMDL mdlBuf;
@@ -43,6 +43,7 @@ typedef struct _HDAC_RB {
     UINT32 res[HDA_MAX_CODECS];
 } HDAC_RB, *PHDAC_RB;
 
+struct _PDO_DEVICE_DATA;
 typedef struct _FDO_CONTEXT
 {
     WDFDEVICE WdfDevice;
@@ -62,7 +63,7 @@ typedef struct _FDO_CONTEXT
     UINT32 numStreams;
 
     PHDAC_STREAM streams;
-    PPDO_DEVICE_DATA codecs[HDA_MAX_CODECS];
+    struct _PDO_DEVICE_DATA* codecs[HDA_MAX_CODECS];
 
     //bit flags of detected codecs
     UINT16 codecMask;
