@@ -62,6 +62,7 @@ typedef struct _FDO_CONTEXT
     UINT32 numStreams;
 
     PHDAC_STREAM streams;
+    PPDO_DEVICE_DATA codecs[HDA_MAX_CODECS];
 
     //bit flags of detected codecs
     UINT16 codecMask;

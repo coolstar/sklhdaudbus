@@ -412,6 +412,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
     WdfChildListBeginScan(WdfFdoGetDefaultChildList(Device));
 
     for (int addr = 0; addr < HDA_MAX_CODECS; addr++) {
+        fdoCtx->codecs[addr] = NULL;
         if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
             continue;
 

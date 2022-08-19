@@ -418,6 +418,8 @@ Bus_CreatePdo(
     pdoData->FdoContext = Desc->FdoContext;
     RtlCopyMemory(&pdoData->CodecIds, &Desc->CodecIds, sizeof(Desc->CodecIds));
 
+    Desc->FdoContext->codecs[Desc->CodecIds.CodecAddress] = pdoData;
+
     //
     // Set some properties for the child device.
     //
