@@ -146,20 +146,33 @@ NTSTATUS HDA_RegisterEventCallback(
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
 
-	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
-	for (int i = 0; i < MAX_UNSOLICIT_CALLBACKS; i++) {
-		if (!devData->unsolitCallbacks[i].inUse) {
-			if (Tag)
-				*Tag = i;
 
-			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Allocated tag %d!\n", __func__, i);
-			devData->unsolitCallbacks[i].inUse = TRUE;
-			devData->unsolitCallbacks[i].Context = Context;
-			devData->unsolitCallbacks[i].Routine = Routine;
-			return STATUS_SUCCESS;
-		}
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (devData->FdoContext) {
+		WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	}
 
+	for (int i = 0; i < MAX_UNSOLICIT_CALLBACKS; i++) {
+		if (devData->unsolitCallbacks[i].inUse)
+			continue;
+
+		if (Tag)
+			*Tag = i;
+
+		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Allocated tag %d!\n", __func__, i);
+		devData->unsolitCallbacks[i].inUse = TRUE;
+		devData->unsolitCallbacks[i].Context = Context;
+		devData->unsolitCallbacks[i].Routine = Routine;
+
+		if (devData->FdoContext) {
+			WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+		}
+		return STATUS_SUCCESS;
+	}
+
+	if (devData->FdoContext) {
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	}
 	return STATUS_NO_SUCH_DEVICE;
 }
 
@@ -178,9 +191,17 @@ NTSTATUS HDA_UnregisterEventCallback(
 		return STATUS_NOT_FOUND;
 	}
 
+	if (devData->FdoContext) {
+		WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+	}
+
 	devData->unsolitCallbacks[Tag].Routine = NULL;
 	devData->unsolitCallbacks[Tag].Context = NULL;
 	devData->unsolitCallbacks[Tag].inUse = FALSE;
+
+	if (devData->FdoContext) {
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	}
 
 	return STATUS_SUCCESS;
 }
