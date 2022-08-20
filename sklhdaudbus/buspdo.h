@@ -34,6 +34,8 @@ typedef struct _PDO_IDENTIFICATION_DESCRIPTION
 } PDO_IDENTIFICATION_DESCRIPTION, * PPDO_IDENTIFICATION_DESCRIPTION;
 
 #define MAX_UNSOLICIT_CALLBACKS 64 // limit is 64 for hdaudbus (See: https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/hdaudio/nc-hdaudio-pregister_event_callback)
+#define SUBTAG_MASK 0x3F
+#define TAG_ADDR_SHIFT 6
 
 //
 // This is PDO device-extension.

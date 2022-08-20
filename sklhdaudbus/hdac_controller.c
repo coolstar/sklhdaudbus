@@ -190,7 +190,49 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 				res, res_ex, fdoCtx->rirb.rp, wp);
 		}
 		else if (res_ex & HDA_RIRB_EX_UNSOL_EV) {
-			DbgPrint("Unsolicited Event received\n");
+			DbgPrint("Unsolicited Event received\n", res, res_ex);
+
+			UINT wp = (fdoCtx->unsol_wp + 1) % HDA_UNSOL_QUEUE_SIZE;
+			fdoCtx->unsol_wp = wp;
+
+			wp <<= 1;
+			fdoCtx->unsol_queue[wp] = res;
+			fdoCtx->unsol_queue[wp + 1] = res_ex;
+
+			//TODO: move next loop to workitem?
+			UINT rp, caddr, res;
+			while (fdoCtx->unsol_rp != fdoCtx->unsol_wp) {
+				rp = (fdoCtx->unsol_rp + 1) % HDA_UNSOL_QUEUE_SIZE;
+				fdoCtx->unsol_rp = rp;
+				rp <<= 1;
+				res = fdoCtx->unsol_queue[rp];
+				caddr = fdoCtx->unsol_queue[rp + 1];
+
+				if (!(caddr & (1 << 4))) //no unsolicited event
+					continue;
+
+				UINT8 addr = caddr & 0x0f;
+				PPDO_DEVICE_DATA codec = fdoCtx->codecs[addr];
+				if (!codec || codec->FdoContext != fdoCtx)
+					continue;
+
+				HDAUDIO_CODEC_RESPONSE response;
+				RtlZeroMemory(&response, sizeof(HDAUDIO_CODEC_RESPONSE));
+
+				response.Response = res;
+				response.IsUnsolicitedResponse = 1;
+
+				UINT tag = response.Unsolicited.Tag;
+				DbgPrint("Unsolit Resp (Tag: 0x%x, Subtag: 0x%x, Resp: 0x%x)", response.Unsolicited.Tag, response.Unsolicited.SubTag, response.Unsolicited.Response);
+
+				if (codec->unsolitCallbacks[tag].inUse && codec->unsolitCallbacks[tag].Routine) {
+
+					
+					codec->unsolitCallbacks[tag].Routine(response, codec->unsolitCallbacks[tag].Context);
+				}
+
+				DbgPrint("Res: 0x%x Addr: 0x%x\n", res, caddr);
+			}
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
 			fdoCtx->rirb.res[addr] = res;

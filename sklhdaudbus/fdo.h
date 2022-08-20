@@ -65,6 +65,10 @@ typedef struct _FDO_CONTEXT
     PHDAC_STREAM streams;
     struct _PDO_DEVICE_DATA* codecs[HDA_MAX_CODECS];
 
+    //unsolicited events
+    UINT32 unsol_queue[HDA_UNSOL_QUEUE_SIZE * 2];
+    UINT unsol_rp, unsol_wp;
+
     //bit flags of detected codecs
     UINT16 codecMask;
 
