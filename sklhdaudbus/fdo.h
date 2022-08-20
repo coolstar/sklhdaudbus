@@ -15,8 +15,11 @@ typedef struct _PCI_BAR {
 #define HDA_MAX_CODECS		8	/* limit by controller side */
 
 struct _FDO_CONTEXT;
+struct _PDO_DEVICE_DATA;
 typedef struct _HDAC_STREAM {
     struct _FDO_CONTEXT* FdoContext;
+    struct _PDO_DEVICE_DATA* PdoContext;
+
     PMDL mdlBuf;
     UINT32* posbuf;
 
@@ -32,6 +35,8 @@ typedef struct _HDAC_STREAM {
     UINT8 streamTag;
     UINT8 idx;
 
+    PHDAUDIO_STREAM_FORMAT streamFormat;
+
     BOOLEAN running, prepared;
 } HDAC_STREAM, *PHDAC_STREAM;
 
@@ -43,7 +48,6 @@ typedef struct _HDAC_RB {
     UINT32 res[HDA_MAX_CODECS];
 } HDAC_RB, *PHDAC_RB;
 
-struct _PDO_DEVICE_DATA;
 typedef struct _FDO_CONTEXT
 {
     WDFDEVICE WdfDevice;

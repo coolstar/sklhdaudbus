@@ -55,7 +55,44 @@ NTSTATUS HDA_AllocateCaptureDmaEngine(
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PFDO_CONTEXT fdoContext = devData->FdoContext;
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+	for (int i = 0; i < fdoContext->captureStreams; i++) {
+		int tag = fdoContext->captureIndexOff;
+		PHDAC_STREAM stream = &fdoContext->streams[i];
+		if (stream->PdoContext != NULL) {
+			continue;
+		}
+
+		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Allocated capture stream idx %d, tag %d!\n", __func__, i, tag);
+
+		stream->PdoContext = devData;
+		stream->prepared = FALSE;
+		stream->running = FALSE;
+		stream->streamFormat = StreamFormat;
+
+		ConverterFormat->ConverterFormat = 0;
+		ConverterFormat->BitsPerSample = StreamFormat->ValidBitsPerSample;
+		ConverterFormat->NumberOfChannels = StreamFormat->NumberOfChannels;
+		ConverterFormat->SampleRate = StreamFormat->SampleRate;
+		ConverterFormat->StreamType = 0;
+
+		if (Handle)
+			*Handle = (HANDLE)stream;
+
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+		return STATUS_SUCCESS;
+	}
+
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
 NTSTATUS HDA_AllocateRenderDmaEngine(
@@ -66,7 +103,44 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PFDO_CONTEXT fdoContext = devData->FdoContext;
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+	for (int i = 0; i < fdoContext->playbackStreams; i++) {
+		int tag = fdoContext->playbackIndexOff;
+		PHDAC_STREAM stream = &fdoContext->streams[i];
+		if (stream->PdoContext != NULL) {
+			continue;
+		}
+
+		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Allocated render stream idx %d, tag %d!\n", __func__, i, tag);
+
+		stream->PdoContext = devData;
+		stream->prepared = FALSE;
+		stream->running = FALSE;
+		stream->streamFormat = StreamFormat;
+
+		ConverterFormat->ConverterFormat = 0;
+		ConverterFormat->BitsPerSample = StreamFormat->ValidBitsPerSample;
+		ConverterFormat->NumberOfChannels = StreamFormat->NumberOfChannels;
+		ConverterFormat->SampleRate = StreamFormat->SampleRate;
+		ConverterFormat->StreamType = 0;
+
+		if (Handle)
+			*Handle = (HANDLE)stream;
+
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+		return STATUS_SUCCESS;
+	}
+
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
 NTSTATUS HDA_ChangeBandwidthAllocation(
@@ -76,7 +150,35 @@ NTSTATUS HDA_ChangeBandwidthAllocation(
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+
+	if (stream->prepared || stream->running) {
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	stream->streamFormat = StreamFormat;
+
+	ConverterFormat->ConverterFormat = 0;
+	ConverterFormat->BitsPerSample = StreamFormat->ValidBitsPerSample;
+	ConverterFormat->NumberOfChannels = StreamFormat->NumberOfChannels;
+	ConverterFormat->SampleRate = StreamFormat->SampleRate;
+	ConverterFormat->StreamType = 0;
+
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_AllocateDmaBuffer(
@@ -105,7 +207,28 @@ NTSTATUS HDA_FreeDmaEngine(
 	_In_ HANDLE Handle
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+
+	if (stream->prepared || stream->running) {
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	stream->PdoContext = NULL;
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_SetDmaEngineState(
@@ -173,7 +296,7 @@ NTSTATUS HDA_RegisterEventCallback(
 	if (devData->FdoContext) {
 		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 	}
-	return STATUS_NO_SUCH_DEVICE;
+	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
 NTSTATUS HDA_UnregisterEventCallback(
@@ -313,12 +436,12 @@ HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
 	busInterface.InterfaceReference = WdfDeviceInterfaceReferenceNoOp;
 	busInterface.InterfaceDereference = WdfDeviceInterfaceDereferenceNoOp;
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
-	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine; //TODO
-	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine; //TODO
-	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation; //TODO
+	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
+	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;
 	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer; //TODO
 	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer; //TODO
-	busInterface.FreeDmaEngine = HDA_FreeDmaEngine; //TODO
+	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;
 	busInterface.SetDmaEngineState = HDA_SetDmaEngineState; //TODO
 	busInterface.GetWallClockRegister = HDA_GetWallClockRegister; //TODO
 	busInterface.GetLinkPositionRegister = HDA_GetLinkPositionRegister; //TODO
