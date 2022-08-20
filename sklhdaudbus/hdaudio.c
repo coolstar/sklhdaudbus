@@ -313,23 +313,23 @@ HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
 	busInterface.InterfaceReference = WdfDeviceInterfaceReferenceNoOp;
 	busInterface.InterfaceDereference = WdfDeviceInterfaceDereferenceNoOp;
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
-	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
-	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
-	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;
-	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer;
-	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer;
-	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;
-	busInterface.SetDmaEngineState = HDA_SetDmaEngineState;
-	busInterface.GetWallClockRegister = HDA_GetWallClockRegister;
-	busInterface.GetLinkPositionRegister = HDA_GetLinkPositionRegister;
+	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine; //TODO
+	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine; //TODO
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation; //TODO
+	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer; //TODO
+	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer; //TODO
+	busInterface.FreeDmaEngine = HDA_FreeDmaEngine; //TODO
+	busInterface.SetDmaEngineState = HDA_SetDmaEngineState; //TODO
+	busInterface.GetWallClockRegister = HDA_GetWallClockRegister; //TODO
+	busInterface.GetLinkPositionRegister = HDA_GetLinkPositionRegister; //TODO
 	busInterface.RegisterEventCallback = HDA_RegisterEventCallback;
 	busInterface.UnregisterEventCallback = HDA_UnregisterEventCallback;
-	busInterface.GetDeviceInformation = HDA_GetDeviceInformation;
+	busInterface.GetDeviceInformation = HDA_GetDeviceInformation; //TODO
 	busInterface.GetResourceInformation = HDA_GetResourceInformation;
-	busInterface.AllocateDmaBufferWithNotification = HDA_AllocateDmaBufferWithNotification;
-	busInterface.FreeDmaBufferWithNotification = HDA_FreeDmaBufferWithNotification;
-	busInterface.RegisterNotificationEvent = HDA_RegisterNotificationEvent;
-	busInterface.UnregisterNotificationEvent = HDA_UnregisterNotificationEvent;
+	busInterface.AllocateDmaBufferWithNotification = HDA_AllocateDmaBufferWithNotification; //TODO
+	busInterface.FreeDmaBufferWithNotification = HDA_FreeDmaBufferWithNotification; //TODO
+	busInterface.RegisterNotificationEvent = HDA_RegisterNotificationEvent; //TODO
+	busInterface.UnregisterNotificationEvent = HDA_UnregisterNotificationEvent; //TODO
 
 	return busInterface;
 }
