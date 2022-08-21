@@ -75,6 +75,7 @@ typedef struct _FDO_CONTEXT
 
     //bit flags of detected codecs
     UINT16 codecMask;
+    USHORT numCodecs;
 
     HDAC_RB corb;
     HDAC_RB rirb;

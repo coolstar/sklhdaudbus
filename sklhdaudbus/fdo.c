@@ -411,6 +411,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
 
     WdfChildListBeginScan(WdfFdoGetDefaultChildList(Device));
 
+    fdoCtx->numCodecs = 0;
     for (int addr = 0; addr < HDA_MAX_CODECS; addr++) {
         fdoCtx->codecs[addr] = NULL;
         if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
@@ -430,6 +431,8 @@ Fdo_EvtDeviceSelfManagedIoInit(
         if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_NODE_COUNT, &nodeCount))) {
             continue;
         }
+
+        fdoCtx->numCodecs += 1;
 
         UINT16 startID = (nodeCount >> 16) & 0x7FFF;
         nodeCount = (nodeCount & 0x7FFF);
