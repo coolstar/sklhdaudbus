@@ -190,8 +190,6 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 				res, res_ex, fdoCtx->rirb.rp, wp);
 		}
 		else if (res_ex & HDA_RIRB_EX_UNSOL_EV) {
-			DbgPrint("Unsolicited Event received\n", res, res_ex);
-
 			UINT wp = (fdoCtx->unsol_wp + 1) % HDA_UNSOL_QUEUE_SIZE;
 			fdoCtx->unsol_wp = wp;
 
@@ -223,22 +221,18 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 				response.IsUnsolicitedResponse = 1;
 
 				UINT tag = response.Unsolicited.Tag;
-				DbgPrint("Unsolit Resp (Tag: 0x%x, Subtag: 0x%x, Resp: 0x%x)", response.Unsolicited.Tag, response.Unsolicited.SubTag, response.Unsolicited.Response);
-
 				if (codec->unsolitCallbacks[tag].inUse && codec->unsolitCallbacks[tag].Routine) {
 
 					
 					codec->unsolitCallbacks[tag].Routine(response, codec->unsolitCallbacks[tag].Context);
 				}
-
-				DbgPrint("Res: 0x%x Addr: 0x%x\n", res, caddr);
 			}
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
 			fdoCtx->rirb.res[addr] = res;
 			fdoCtx->rirb.cmds[addr]--;
 			if (!fdoCtx->rirb.cmds[addr]) {
-				DbgPrint("TODO: Notify for RIRB processed\n");
+				//TODO: Notify for RIRB processed
 			}
 		}
 		else {
@@ -258,7 +252,6 @@ NTSTATUS hdac_bus_get_response(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32* res) {
 		if (!fdoCtx->rirb.cmds[addr]) {
 			if (res) {
 				*res = fdoCtx->rirb.res[addr]; //the last value
-				DbgPrint("Read Response 0x%x\n", *res);
 			}
 			return STATUS_SUCCESS;
 		}
@@ -423,7 +416,6 @@ BOOLEAN hda_interrupt(
 			hda_write16(fdoCtx, RIRBSTS, RIRB_INT_MASK);
 			active = TRUE;
 			if (status & RIRB_INT_RESPONSE) {
-				DbgPrint("Got RIRB\n");
 				hdac_bus_update_rirb(fdoCtx);
 			}
 		}

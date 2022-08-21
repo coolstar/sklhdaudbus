@@ -8,7 +8,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 	_In_opt_ PHDAUDIO_TRANSFER_COMPLETE_CALLBACK Callback,
 	_In_opt_ PVOID Context
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, Count);
+	//SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, Count);
 
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
@@ -22,19 +22,19 @@ NTSTATUS HDA_TransferCodecVerbs(
 
 	for (ULONG i = 0; i < Count; i++) {
 		PHDAUDIO_CODEC_TRANSFER transfer = &CodecTransfer[i];
-		if ((transfer->Output.Command & 0x70000) == 0x70000) {
+		/*if ((transfer->Output.Command & 0x70000) == 0x70000) {
 			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Command8: 0x%x (Node: 0x%x, Verb: 0x%x, Parameter: 0x%x)\n", transfer->Output.Command, transfer->Output.Verb8.Node, transfer->Output.Verb8.VerbId, transfer->Output.Verb8.Data);
 		} 
 		else {
 			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Command16: 0x%x (Node: 0x%x, Verb: 0x%x, Parameter: 0x%x)\n", transfer->Output.Command, transfer->Output.Verb16.Node, transfer->Output.Verb16.VerbId, transfer->Output.Verb16.Data);
-		}
+		}*/
 		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
 		UINT32 response = 0;
 		status = hdac_bus_exec_verb(devData->FdoContext, devData->CodecIds.CodecAddress, transfer->Output.Command, &response);
 		transfer->Input.Response = response;
 		if (NT_SUCCESS(status)) {
 			transfer->Input.IsValid = 1;
-			DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
+			//DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
 		} else {
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL, "%s: Verb exec failed! 0x%x\n", __func__, status);
 		}
@@ -190,7 +190,7 @@ NTSTATUS HDA_AllocateDmaBuffer(
 	_Out_ PUCHAR StreamId,
 	_Out_ PULONG FifoSize
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Requested: %lld bytes, IRQL: %d)!\n", __func__, RequestedBufferSize, KeGetCurrentIrql());
 
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
@@ -218,6 +218,12 @@ NTSTATUS HDA_AllocateDmaBuffer(
 	PHYSICAL_ADDRESS skipBytes;
 	skipBytes.QuadPart = 0;
 
+	if (KeGetCurrentIrql() > APC_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	
+
 	PMDL mdl = MmAllocatePagesForMdlEx(lowAddr, maxAddr, skipBytes, RequestedBufferSize, MmNonCached, 0);
 	if (!mdl) {
 		return STATUS_NO_MEMORY;
@@ -231,6 +237,10 @@ NTSTATUS HDA_AllocateDmaBuffer(
 	*AllocatedBufferSize = mdl->ByteCount;
 	*StreamId = stream->streamTag;
 	*FifoSize = 0;
+
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s: Requested %lld, got %lld bytes\n", __func__, RequestedBufferSize, *AllocatedBufferSize);
+
+	mdelay(1000);
 
 	//TODO: Program DMA to device
 
@@ -267,6 +277,9 @@ NTSTATUS HDA_FreeDmaBuffer(
 	stream->mdlBuf = NULL;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s done!\n", __func__);
+	mdelay(1000);
 
 	//TODO: Deprogram DMA from device
 
@@ -510,7 +523,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	_Out_ PUCHAR StreamId,
 	_Out_ PULONG FifoSize
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Requested: %lld bytes, IRQL: %d)!\n", __func__, RequestedBufferSize, KeGetCurrentIrql());
 
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
@@ -538,6 +551,10 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	PHYSICAL_ADDRESS skipBytes;
 	skipBytes.QuadPart = 0;
 
+	if (KeGetCurrentIrql() > APC_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	PMDL mdl = MmAllocatePagesForMdlEx(lowAddr, maxAddr, skipBytes, RequestedBufferSize, MmNonCached, 0);
 	if (!mdl) {
 		return STATUS_NO_MEMORY;
@@ -549,8 +566,12 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 
 	*BufferMdl = mdl;
 	*AllocatedBufferSize = mdl->ByteCount;
+	*OffsetFromFirstPage = 0;
 	*StreamId = stream->streamTag;
 	*FifoSize = 0;
+
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s: Requested %lld, got %lld bytes\n", __func__, RequestedBufferSize, *AllocatedBufferSize);
+	mdelay(1000);
 
 	//TODO: Program DMA to device
 
@@ -589,6 +610,9 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	stream->mdlBuf = NULL;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s done!\n", __func__);
+	mdelay(1000);
 
 	//TODO: Deprogram DMA from device
 
