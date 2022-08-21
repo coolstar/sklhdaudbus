@@ -191,7 +191,50 @@ NTSTATUS HDA_AllocateDmaBuffer(
 	_Out_ PULONG FifoSize
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	if (stream->prepared || stream->running) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	if (stream->mdlBuf) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	PHYSICAL_ADDRESS lowAddr;
+	lowAddr.QuadPart = 0;
+	PHYSICAL_ADDRESS maxAddr;
+	maxAddr.QuadPart = MAXULONG64;
+
+	PHYSICAL_ADDRESS skipBytes;
+	skipBytes.QuadPart = 0;
+
+	PMDL mdl = MmAllocatePagesForMdlEx(lowAddr, maxAddr, skipBytes, RequestedBufferSize, MmNonCached, 0);
+	if (!mdl) {
+		return STATUS_NO_MEMORY;
+	}
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+	stream->mdlBuf = mdl;
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	*BufferMdl = mdl;
+	*AllocatedBufferSize = mdl->ByteCount;
+	*StreamId = stream->streamTag;
+	*FifoSize = 0;
+
+	//TODO: Program DMA to device
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_FreeDmaBuffer(
@@ -199,7 +242,35 @@ NTSTATUS HDA_FreeDmaBuffer(
 	_In_ HANDLE Handle
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	if (stream->prepared || stream->running) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	if (!stream->mdlBuf) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+
+	MmFreePagesFromMdl(stream->mdlBuf);
+	stream->mdlBuf = NULL;
+
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	//TODO: Deprogram DMA from device
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_FreeDmaEngine(
@@ -440,7 +511,50 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	_Out_ PULONG FifoSize
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	if (stream->prepared || stream->running) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	if (stream->mdlBuf) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	PHYSICAL_ADDRESS lowAddr;
+	lowAddr.QuadPart = 0;
+	PHYSICAL_ADDRESS maxAddr;
+	maxAddr.QuadPart = MAXULONG64;
+
+	PHYSICAL_ADDRESS skipBytes;
+	skipBytes.QuadPart = 0;
+
+	PMDL mdl = MmAllocatePagesForMdlEx(lowAddr, maxAddr, skipBytes, RequestedBufferSize, MmNonCached, 0);
+	if (!mdl) {
+		return STATUS_NO_MEMORY;
+	}
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+	stream->mdlBuf = mdl;
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	*BufferMdl = mdl;
+	*AllocatedBufferSize = mdl->ByteCount;
+	*StreamId = stream->streamTag;
+	*FifoSize = 0;
+
+	//TODO: Program DMA to device
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_FreeDmaBufferWithNotification(
@@ -450,7 +564,35 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	_In_ SIZE_T BufferSize
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	if (stream->prepared || stream->running) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	if (!stream->mdlBuf) {
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+
+	MmFreePagesFromMdl(stream->mdlBuf);
+	stream->mdlBuf = NULL;
+
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	//TODO: Deprogram DMA from device
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_RegisterNotificationEvent(

@@ -238,6 +238,22 @@ Fdo_EvtDevicePrepareHardware(
     }
     RtlZeroMemory(fdoCtx->streams, sizeof(HDAC_STREAM) * fdoCtx->numStreams);
 
+    PHYSICAL_ADDRESS maxAddr;
+    maxAddr.QuadPart = MAXULONG64;
+
+    fdoCtx->posbuf = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
+    RtlZeroMemory(fdoCtx->posbuf, PAGE_SIZE);
+    if (!fdoCtx->posbuf) {
+        return STATUS_NO_MEMORY;
+    }
+
+    fdoCtx->rb = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
+    RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
+
+    if (!fdoCtx->rb) {
+        return STATUS_NO_MEMORY;
+    }
+
     //Init Streams
     {
         UINT32 i;
@@ -263,27 +279,12 @@ Fdo_EvtDevicePrepareHardware(
                 stream->idx = i;
                 stream->direction = dir;
                 stream->streamTag = tag;
+                stream->posbuf = (UINT32 *)(((UINT8 *)fdoCtx->posbuf) + (i * 8));
             }
 
             SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                 "Stream tag (idx %d): %d\n", i, tag);
         }
-    }
-
-    PHYSICAL_ADDRESS maxAddr;
-    maxAddr.QuadPart = MAXULONG64;
-
-    fdoCtx->posbuf = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
-    RtlZeroMemory(fdoCtx->posbuf, PAGE_SIZE);
-    if (!fdoCtx->posbuf) {
-        return STATUS_NO_MEMORY;
-    }
-
-    fdoCtx->rb = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
-    RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
-    
-    if (!fdoCtx->rb) {
-        return STATUS_NO_MEMORY;
     }
 
     WdfWaitLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &fdoCtx->cmdLock);
