@@ -10,7 +10,7 @@ typedef struct _CODEC_UNSOLIT_CALLBACK {
 } CODEC_UNSOLIT_CALLBACK, *PCODEC_UNSOLICIT_CALLBACK;
 
 typedef struct _CODEC_IDS {
-    UCHAR CodecAddress;
+    UINT16 CodecAddress;
     UCHAR FunctionGroupStartNode;
 
     UINT16 CtlrDevId;

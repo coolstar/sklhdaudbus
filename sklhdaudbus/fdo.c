@@ -199,11 +199,11 @@ Fdo_EvtDevicePrepareHardware(
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                     "Found BAR4: 0x%llx (size 0x%lx)\n", pDescriptor->u.Memory.Start.QuadPart, pDescriptor->u.Memory.Length);
 
-                fdoCtx->m_BAR0.Base.Base = MmMapIoSpace(pDescriptor->u.Memory.Start, pDescriptor->u.Memory.Length, MmNonCached);
-                fdoCtx->m_BAR0.Len = pDescriptor->u.Memory.Length;
+                fdoCtx->m_BAR4.Base.Base = MmMapIoSpace(pDescriptor->u.Memory.Start, pDescriptor->u.Memory.Length, MmNonCached);
+                fdoCtx->m_BAR4.Len = pDescriptor->u.Memory.Length;
 
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-                    "Mapped to %p\n", fdoCtx->m_BAR0.Base.baseptr);
+                    "Mapped to %p\n", fdoCtx->m_BAR4.Base.baseptr);
                 fBar4Found = TRUE;
             }
             break;
@@ -278,8 +278,15 @@ Fdo_EvtDevicePrepareHardware(
                 stream->int_sta_mask = 1 << i;
                 stream->idx = i;
                 stream->direction = dir;
-                stream->streamTag = tag;
+                if (fdoCtx->venId == VEN_INTEL)
+                    stream->streamTag = tag;
+                else
+                    stream->streamTag = i + 1;
                 stream->posbuf = (UINT32 *)(((UINT8 *)fdoCtx->posbuf) + (i * 8));
+
+                PHYSICAL_ADDRESS maxAddr;
+                maxAddr.QuadPart = MAXULONG64;
+                stream->bdl = MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
             }
 
             SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
@@ -314,8 +321,17 @@ Fdo_EvtDeviceReleaseHardware(
     if (fdoCtx->rb)
         MmFreeContiguousMemory(fdoCtx->rb);
 
-    if (fdoCtx->streams)
+    if (fdoCtx->streams) {
+        for (int i = 0; i < fdoCtx->numStreams; i++) {
+            PHDAC_STREAM stream = &fdoCtx->streams[i];
+            if (stream->bdl) {
+                MmFreeContiguousMemory(stream->bdl);
+                stream->bdl = NULL;
+            }
+        }
+
         ExFreePoolWithTag(fdoCtx->streams, SKLHDAUDBUS_POOL_TAG);
+    }
 
     if (fdoCtx->m_BAR0.Base.Base)
         MmUnmapIoSpace(fdoCtx->m_BAR0.Base.Base, fdoCtx->m_BAR0.Len);

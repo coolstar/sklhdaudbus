@@ -55,6 +55,10 @@ static void update_pci_byte(PBUS_INTERFACE_STANDARD pciInterface, UINT reg, BYTE
 	pci_write_cfg_byte(pciInterface, reg, data);
 }
 
+#define HDA_RATE(base, mult, div) \
+	(AC_FMT_BASE_##base##K | (((mult) - 1) << AC_FMT_MULT_SHIFT) | \
+	 (((div) - 1) << AC_FMT_DIV_SHIFT))
+
 #define hda_read8(ctx, reg) read8((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg)
 #define hda_write8(ctx, reg, data) write8((ctx)->m_BAR0.Base.baseptr + HDA_REG_##reg, data)
 #define hda_update8(ctx, reg, mask, val) hda_write8(ctx, reg, (hda_read8(ctx, reg) & ~(mask)) | (val))

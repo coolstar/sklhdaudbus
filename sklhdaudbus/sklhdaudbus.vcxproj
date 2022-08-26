@@ -147,9 +147,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buspdo.h" />
+    <ClInclude Include="crabrave.h" />
     <ClInclude Include="driver.h" />
     <ClInclude Include="fdo.h" />
     <ClInclude Include="hdac_controller.h" />
+    <ClInclude Include="hdac_stream.h" />
     <ClInclude Include="hda_registers.h" />
     <ClInclude Include="hda_verbs.h" />
     <ClInclude Include="regfuncs.h" />
@@ -159,6 +161,7 @@
     <ClCompile Include="buspdo.c" />
     <ClCompile Include="fdo.c" />
     <ClCompile Include="hdac_controller.c" />
+    <ClCompile Include="hdac_stream.c" />
     <ClCompile Include="hdaudio.c" />
     <ClCompile Include="sklhdaudbus.c" />
   </ItemGroup>

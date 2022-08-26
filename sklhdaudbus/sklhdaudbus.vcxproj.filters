@@ -29,6 +29,9 @@
     <ClCompile Include="hdaudio.c">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="hdac_stream.c">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h">
@@ -53,6 +56,12 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="regfuncs.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="hdac_stream.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="crabrave.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
