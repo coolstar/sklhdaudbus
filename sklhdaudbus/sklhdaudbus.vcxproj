@@ -158,12 +158,12 @@
     <ClInclude Include="trace.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="buspdo.c" />
-    <ClCompile Include="fdo.c" />
-    <ClCompile Include="hdac_controller.c" />
-    <ClCompile Include="hdac_stream.c" />
-    <ClCompile Include="hdaudio.c" />
-    <ClCompile Include="sklhdaudbus.c" />
+    <ClCompile Include="buspdo.cpp" />
+    <ClCompile Include="fdo.cpp" />
+    <ClCompile Include="hdac_controller.cpp" />
+    <ClCompile Include="hdac_stream.cpp" />
+    <ClCompile Include="hdaudio.cpp" />
+    <ClCompile Include="sklhdaudbus.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

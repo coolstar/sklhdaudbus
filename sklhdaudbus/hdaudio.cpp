@@ -185,7 +185,7 @@ NTSTATUS HDA_FreeDmaEngine(
 		return STATUS_NO_SUCH_DEVICE;
 	}
 
-	PHDAC_STREAM stream = Handle;
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
 	if (stream->PdoContext != devData) {
 		return STATUS_INVALID_HANDLE;
 	}
@@ -221,9 +221,9 @@ VOID HDA_GetWallClockRegister(
 
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
-		return STATUS_NO_SUCH_DEVICE;
+		return;
 	}
-	*Wallclock = (devData->FdoContext)->m_BAR0.Base.baseptr + HDA_REG_WALLCLK;
+	*Wallclock = (ULONG *)((devData->FdoContext)->m_BAR0.Base.baseptr + HDA_REG_WALLCLK);
 }
 
 NTSTATUS HDA_GetLinkPositionRegister(
@@ -238,12 +238,12 @@ NTSTATUS HDA_GetLinkPositionRegister(
 		return STATUS_NO_SUCH_DEVICE;
 	}
 
-	PHDAC_STREAM stream = Handle;
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
 	if (stream->PdoContext != devData) {
 		return STATUS_INVALID_HANDLE;
 	}
 
-	*Position = stream->posbuf;
+	*Position = (ULONG *)stream->posbuf;
 
 	return STATUS_SUCCESS;
 }
@@ -328,7 +328,7 @@ NTSTATUS HDA_GetDeviceInformation(
 	return STATUS_UNSUCCESSFUL;
 }
 
-HDA_GetResourceInformation(
+void HDA_GetResourceInformation(
 	_In_ PVOID _context,
 	_Out_ PUCHAR CodecAddress,
 	_Out_ PUCHAR FunctionGroupStartNode
@@ -391,7 +391,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 		return STATUS_NO_SUCH_DEVICE;
 	}
 
-	PHDAC_STREAM stream = Handle;
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
 	if (stream->PdoContext != devData) {
 		return STATUS_INVALID_HANDLE;
 	}
@@ -426,7 +426,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	stream->mdlBuf = mdl;
 	stream->bufSz = MmGetMdlByteCount(mdl);
 
-	stream->virtAddr = MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmWriteCombined, NULL, FALSE, MdlMappingNoExecute);
+	stream->virtAddr = (UINT8*)MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmWriteCombined, NULL, FALSE, MdlMappingNoExecute);
 
 	UINT32 smallestCopy = min(stream->bufSz, crabrave_size);
 	DbgPrint("Mapped Buf: 0x%llx\n", stream->virtAddr);
@@ -478,7 +478,7 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 		return STATUS_NO_SUCH_DEVICE;
 	}
 
-	PHDAC_STREAM stream = Handle;
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
 	if (stream->PdoContext != devData) {
 		return STATUS_INVALID_HANDLE;
 	}

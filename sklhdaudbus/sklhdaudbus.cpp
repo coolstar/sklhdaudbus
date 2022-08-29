@@ -20,7 +20,7 @@ SklHdAudBusEvtDeviceAdd(
 	return status;
 }
 
-NTSTATUS
+extern "C" NTSTATUS
 DriverEntry(
 __in PDRIVER_OBJECT  DriverObject,
 __in PUNICODE_STRING RegistryPath

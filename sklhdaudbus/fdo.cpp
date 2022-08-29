@@ -232,7 +232,7 @@ Fdo_EvtDevicePrepareHardware(
     fdoCtx->playbackIndexOff = fdoCtx->captureStreams;
     fdoCtx->numStreams = fdoCtx->captureStreams + fdoCtx->playbackStreams;
 
-    fdoCtx->streams = ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
+    fdoCtx->streams = (PHDAC_STREAM)ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
     if (!fdoCtx->streams) {
         return STATUS_NO_MEMORY;
     }
@@ -286,7 +286,7 @@ Fdo_EvtDevicePrepareHardware(
 
                 PHYSICAL_ADDRESS maxAddr;
                 maxAddr.QuadPart = MAXULONG64;
-                stream->bdl = MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
+                stream->bdl = (UINT32 *)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
             }
 
             SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,

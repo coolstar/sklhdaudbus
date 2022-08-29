@@ -14,22 +14,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="sklhdaudbus.c">
+    <ClCompile Include="sklhdaudbus.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="fdo.c">
+    <ClCompile Include="fdo.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="buspdo.c">
+    <ClCompile Include="buspdo.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="hdac_controller.c">
+    <ClCompile Include="hdac_controller.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="hdaudio.c">
+    <ClCompile Include="hdaudio.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="hdac_stream.c">
+    <ClCompile Include="hdac_stream.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>

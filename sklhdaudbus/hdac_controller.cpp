@@ -30,7 +30,7 @@ static void hda_clear_corbrp(PFDO_CONTEXT fdoCtx) {
 void hdac_bus_init_cmd_io(PFDO_CONTEXT fdoCtx) {
 	//CORB Set up
 	WdfInterruptAcquireLock(fdoCtx->Interrupt);
-	fdoCtx->corb.buf = fdoCtx->rb;
+	fdoCtx->corb.buf = (UINT32 *)fdoCtx->rb;
 	fdoCtx->corb.addr = MmGetPhysicalAddress(fdoCtx->corb.buf);
 	hda_write32(fdoCtx, CORBLBASE, fdoCtx->corb.addr.LowPart);
 	hda_write32(fdoCtx, CORBUBASE, fdoCtx->corb.addr.HighPart);

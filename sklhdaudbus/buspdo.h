@@ -52,31 +52,35 @@ typedef struct _PDO_DEVICE_DATA
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(PDO_DEVICE_DATA, PdoGetData)
 
-NTSTATUS
-Bus_EvtChildListIdentificationDescriptionDuplicate(
-    WDFCHILDLIST DeviceList,
-    PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER SourceIdentificationDescription,
-    PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER DestinationIdentificationDescription
-);
+extern "C" {
 
-BOOLEAN
-Bus_EvtChildListIdentificationDescriptionCompare(
-    WDFCHILDLIST DeviceList,
-    PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER FirstIdentificationDescription,
-    PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER SecondIdentificationDescription
-);
+    NTSTATUS
+        Bus_EvtChildListIdentificationDescriptionDuplicate(
+            WDFCHILDLIST DeviceList,
+            PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER SourceIdentificationDescription,
+            PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER DestinationIdentificationDescription
+        );
 
-VOID
-Bus_EvtChildListIdentificationDescriptionCleanup(
-    _In_ WDFCHILDLIST DeviceList,
-    _Out_ PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription
-);
+    BOOLEAN
+        Bus_EvtChildListIdentificationDescriptionCompare(
+            WDFCHILDLIST DeviceList,
+            PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER FirstIdentificationDescription,
+            PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER SecondIdentificationDescription
+        );
 
-NTSTATUS
-Bus_EvtDeviceListCreatePdo(
-    WDFCHILDLIST DeviceList,
-    PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription,
-    PWDFDEVICE_INIT ChildInit
-);
+    VOID
+        Bus_EvtChildListIdentificationDescriptionCleanup(
+            _In_ WDFCHILDLIST DeviceList,
+            _Out_ PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription
+        );
+
+    NTSTATUS
+        Bus_EvtDeviceListCreatePdo(
+            WDFCHILDLIST DeviceList,
+            PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription,
+            PWDFDEVICE_INIT ChildInit
+        );
+
+}
 
 #endif
