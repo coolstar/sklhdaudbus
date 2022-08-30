@@ -390,7 +390,89 @@ Fdo_EvtDeviceD0Entry(
         val &= (0x3 << 20);
         hda_write32(fdoCtx, VS_EM4L, val);
     }
-    //TODO: mlcap & lctl (hda_intel_init_chip)
+
+    //mlcap & lctl (hda_intel_init_chip)
+    if (fdoCtx->venId == VEN_INTEL) {
+        //read bus capabilities
+
+        unsigned int cur_cap;
+        unsigned int offset;
+        unsigned int counter = 0;
+
+        offset = hda_read16(fdoCtx, LLCH);
+
+#define HDAC_MAX_CAPS 10
+
+        /* Lets walk the linked capabilities list */
+        do {
+            cur_cap = read32(fdoCtx->m_BAR0.Base.baseptr + offset);
+
+            SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                "Capability version: 0x%x\n",
+                (cur_cap & HDA_CAP_HDR_VER_MASK) >> HDA_CAP_HDR_VER_OFF);
+
+            SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                "HDA capability ID: 0x%x\n",
+                (cur_cap & HDA_CAP_HDR_ID_MASK) >> HDA_CAP_HDR_ID_OFF);
+
+            if (cur_cap == -1) {
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Invalid capability reg read\n");
+                break;
+            }
+
+            switch ((cur_cap & HDA_CAP_HDR_ID_MASK) >> HDA_CAP_HDR_ID_OFF) {
+            case HDA_ML_CAP_ID:
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Found ML capability\n");
+                fdoCtx->mlcap = fdoCtx->m_BAR0.Base.baseptr + offset;
+                break;
+
+            case HDA_GTS_CAP_ID:
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Found GTS capability offset=%x\n", offset);
+                fdoCtx->gtscap = fdoCtx->m_BAR0.Base.baseptr + offset;
+                break;
+
+            case HDA_PP_CAP_ID:
+                /* PP capability found, the Audio DSP is present */
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Found PP capability offset=%x\n", offset);
+                fdoCtx->ppcap = fdoCtx->m_BAR0.Base.baseptr + offset;
+                break;
+
+            case HDA_SPB_CAP_ID:
+                /* SPIB capability found, handler function */
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Found SPB capability\n");
+                fdoCtx->spbcap = fdoCtx->m_BAR0.Base.baseptr + offset;
+                break;
+
+            case HDA_DRSM_CAP_ID:
+                /* DMA resume  capability found, handler function */
+                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                    "Found DRSM capability\n");
+                fdoCtx->drsmcap = fdoCtx->m_BAR0.Base.baseptr + offset;
+                break;
+
+            default:
+                SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Unknown capability %d\n", cur_cap);
+                cur_cap = 0;
+                break;
+            }
+
+            counter++;
+
+            if (counter > HDAC_MAX_CAPS) {
+                SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "We exceeded HDAC capabilities!!!\n");
+                break;
+            }
+
+            /* read the offset of next capability */
+            offset = cur_cap & HDA_CAP_HDR_NXT_PTR_MASK;
+
+        } while (offset);
+    }
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "hda bus initialized\n");
@@ -408,6 +490,8 @@ Fdo_EvtDeviceD0Exit(
 
     fdoCtx = Fdo_GetContext(Device);
 
+    hdac_bus_stop(fdoCtx);
+
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
@@ -415,6 +499,8 @@ Fdo_EvtDeviceD0Exit(
 
     return status;
 }
+
+#define ENABLE_HDA 0
 
 NTSTATUS
 Fdo_EvtDeviceSelfManagedIoInit(
@@ -429,6 +515,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
     WdfChildListBeginScan(WdfFdoGetDefaultChildList(Device));
 
     fdoCtx->numCodecs = 0;
+#if ENABLE_HDA
     for (int addr = 0; addr < HDA_MAX_CODECS; addr++) {
         fdoCtx->codecs[addr] = NULL;
         if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
@@ -495,11 +582,48 @@ Fdo_EvtDeviceSelfManagedIoInit(
         description.CodecIds.CodecAddress = addr;
         description.CodecIds.FunctionGroupStartNode = startID;
 
+        description.CodecIds.IsDSP = FALSE;
+
         description.CodecIds.FuncId = funcType & 0xFF;
         description.CodecIds.VenId = (vendorDevice >> 16) & 0xFFFF;
         description.CodecIds.DevId = vendorDevice & 0xFFFF;
         description.CodecIds.SubsysId = subsysId;
         description.CodecIds.RevId = (revId >> 8) & 0xFFFF;
+
+        //
+        // Call the framework to add this child to the childlist. This call
+        // will internaly call our DescriptionCompare callback to check
+        // whether this device is a new device or existing device. If
+        // it's a new device, the framework will call DescriptionDuplicate to create
+        // a copy of this description in nonpaged pool.
+        // The actual creation of the child device will happen when the framework
+        // receives QUERY_DEVICE_RELATION request from the PNP manager in
+        // response to InvalidateDeviceRelations call made as part of adding
+        // a new child.
+        //
+        status = WdfChildListAddOrUpdateChildDescriptionAsPresent(
+            WdfFdoGetDefaultChildList(Device), &description.Header,
+            NULL); // AddressDescription
+    }
+#endif
+
+    if (fdoCtx->m_BAR4.Base.Base) { //Populate ADSP if present
+        PDO_IDENTIFICATION_DESCRIPTION description;
+        //
+        // Initialize the description with the information about the detected codec.
+        //
+        WDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER_INIT(
+            &description.Header,
+            sizeof(description)
+        );
+
+        description.FdoContext = fdoCtx;
+
+        description.CodecIds.CtlrDevId = fdoCtx->devId;
+        description.CodecIds.CtlrVenId = fdoCtx->venId;
+
+        description.CodecIds.CodecAddress = 0x10000000;
+        description.CodecIds.IsDSP = TRUE;
 
         //
         // Call the framework to add this child to the childlist. This call

@@ -10,11 +10,13 @@ typedef struct _CODEC_UNSOLIT_CALLBACK {
 } CODEC_UNSOLIT_CALLBACK, *PCODEC_UNSOLICIT_CALLBACK;
 
 typedef struct _CODEC_IDS {
-    UINT16 CodecAddress;
+    UINT32 CodecAddress;
     UCHAR FunctionGroupStartNode;
 
     UINT16 CtlrDevId;
     UINT16 CtlrVenId;
+
+    BOOL IsDSP;
 
     UINT16 FuncId;
     UINT16 VenId;

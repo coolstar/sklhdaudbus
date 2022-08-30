@@ -12,6 +12,7 @@
 #include <ntintsafe.h>
 #include <ntstrsafe.h>
 #include <hdaudio.h>
+#include <portcls.h>
 
 #include "fdo.h"
 #include "buspdo.h"

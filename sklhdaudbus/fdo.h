@@ -64,6 +64,12 @@ typedef struct _FDO_CONTEXT
     BUS_INTERFACE_STANDARD BusInterface; //PCI Bus Interface
     WDFINTERRUPT Interrupt;
 
+    PVOID ppcap;
+    PVOID spbcap;
+    PVOID mlcap;
+    PVOID gtscap;
+    PVOID drsmcap;
+
     UINT32 captureIndexOff;
     UINT32 playbackIndexOff;
     UINT32 captureStreams;

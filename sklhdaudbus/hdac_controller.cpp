@@ -343,6 +343,22 @@ NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
 	return STATUS_SUCCESS;
 }
 
+void hda_int_clear(PFDO_CONTEXT fdoCtx) {
+	//Clear stream status
+	for (int i = 0; i < fdoCtx->numStreams; i++) {
+		stream_write8(&fdoCtx->streams[i], SD_STS, SD_INT_MASK);
+	}
+
+	//Clear STATESTS
+	hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
+
+	//Clear rirb status
+	hda_write16(fdoCtx, RIRBSTS, RIRB_INT_MASK);
+
+	//Clear int status
+	hda_write32(fdoCtx, INTSTS, HDA_INT_CTRL_EN | HDA_INT_ALL_STREAM);
+}
+
 NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 	NTSTATUS status;
 	
@@ -351,23 +367,8 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 		return status;
 	}
 
-	{
-		//Clear Interrupts
-
-		//Clear stream status
-		for (int i = 0; i < fdoCtx->numStreams; i++) {
-			stream_write8(&fdoCtx->streams[i], SD_STS, SD_INT_MASK);
-		}
-
-		//Clear STATESTS
-		hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
-
-		//Clear rirb status
-		hda_write16(fdoCtx, RIRBSTS, RIRB_INT_MASK);
-
-		//Clear int status
-		hda_write32(fdoCtx, INTSTS, HDA_INT_CTRL_EN | HDA_INT_ALL_STREAM);
-	}
+	//Clear Interrupts
+	hda_int_clear(fdoCtx);
 
 	hdac_bus_init_cmd_io(fdoCtx);
 
@@ -381,6 +382,30 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 	hda_write32(fdoCtx, DPUBASE, posbufAddr.HighPart);
 
 	return STATUS_SUCCESS;
+}
+
+void hdac_bus_stop(PFDO_CONTEXT fdoCtx) {
+	/* disable interrupts */
+	{
+		for (int i = 0; i < fdoCtx->numStreams; i++) {
+			stream_update8(&fdoCtx->streams[i], SD_CTL, SD_INT_MASK, 0);
+		}
+
+		/* disable SIE for all streams & disable controller CIE and GIE */
+		hda_write32(fdoCtx, INTCTL, 0);
+	}
+
+	//Clear Interrupts
+	hda_int_clear(fdoCtx);
+
+	/* disable CORB/RIRB */
+	hdac_bus_stop_cmd_io(fdoCtx);
+
+	/* disable position buffer */
+	if (fdoCtx->posbuf) {
+		hda_write32(fdoCtx, DPLBASE, 0);
+		hda_write32(fdoCtx, DPUBASE, 0);
+	}
 }
 
 BOOLEAN hda_interrupt(

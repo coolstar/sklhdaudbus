@@ -86,6 +86,7 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 
 		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Allocated render stream idx %d, tag %d, channels %d, bits %d, sample rate %d!\n", __func__, tag, stream->streamTag, StreamFormat->NumberOfChannels, StreamFormat->ValidBitsPerSample, StreamFormat->SampleRate);
 
+
 		stream->stripe = Stripe;
 		stream->PdoContext = devData;
 		stream->prepared = FALSE;
@@ -407,7 +408,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	PHYSICAL_ADDRESS lowAddr;
 	lowAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
-	maxAddr.QuadPart = 0xFFFFEFFF;
+	maxAddr.QuadPart = MAXUINT64;
 
 	PHYSICAL_ADDRESS skipBytes;
 	skipBytes.QuadPart = 0;
@@ -426,7 +427,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	stream->mdlBuf = mdl;
 	stream->bufSz = MmGetMdlByteCount(mdl);
 
-	stream->virtAddr = (UINT8*)MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmWriteCombined, NULL, FALSE, MdlMappingNoExecute);
+	stream->virtAddr = (UINT8*)MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmWriteCombined, NULL, FALSE, MdlMappingNoExecute | NormalPagePriority);
 
 	UINT32 smallestCopy = min(stream->bufSz, crabrave_size);
 	DbgPrint("Mapped Buf: 0x%llx\n", stream->virtAddr);
