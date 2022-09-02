@@ -607,6 +607,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
     }
 #endif
 
+    fdoCtx->dspInterruptCallback = NULL;
     if (fdoCtx->m_BAR4.Base.Base) { //Populate ADSP if present
         PDO_IDENTIFICATION_DESCRIPTION description;
         //

@@ -5,7 +5,7 @@ static void hda_clear_corbrp(PFDO_CONTEXT fdoCtx) {
 	int timeout;
 
 	//TODO: Re-enable
-	/*for (timeout = 1000; timeout > 0; timeout--) {
+	for (timeout = 1000; timeout > 0; timeout--) {
 		if (hda_read16(fdoCtx, CORBRP) & HDA_CORBRP_RST)
 			break;
 		udelay(1);
@@ -13,7 +13,7 @@ static void hda_clear_corbrp(PFDO_CONTEXT fdoCtx) {
 	if (timeout <= 0) {
 		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT,
 			"CORB reset timeout#1, CORBRP = %d\n", hda_read16(fdoCtx, CORBRP));
-	}*/
+	}
 
 	hda_write16(fdoCtx, CORBRP, 0);
 	for (timeout = 1000; timeout > 0; timeout--) {
@@ -415,6 +415,13 @@ BOOLEAN hda_interrupt(
 
 	WDFDEVICE Device = WdfInterruptGetDevice(Interrupt);
 	PFDO_CONTEXT fdoCtx = Fdo_GetContext(Device);
+
+	if (fdoCtx->dspInterruptCallback) {
+		BOOLEAN ret = fdoCtx->dspInterruptCallback(fdoCtx->dspInterruptContext);
+		if (ret) {
+			return ret;
+		}
+	}
 
 	BOOLEAN active, handled = FALSE;
 	int repeat = 0; //Avoid endless loop
