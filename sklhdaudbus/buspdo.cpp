@@ -210,7 +210,7 @@ Bus_CreatePdo(
         }
 
         status = RtlUnicodeStringPrintf(&compatId, L"CSAUDIO\\ADSP&CTLR_VEN_%02X&CTLR_DEV_%02X",
-            Desc->CodecIds.CtlrDevId, Desc->CodecIds.CtlrVenId);
+            Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId);
         if (!NT_SUCCESS(status)) {
             return status;
         }

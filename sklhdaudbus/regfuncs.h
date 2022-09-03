@@ -78,3 +78,10 @@ static void update_pci_byte(PBUS_INTERFACE_STANDARD pciInterface, UINT reg, BYTE
 #define stream_read32(ctx, reg) read32((ctx)->sdAddr + HDA_REG_##reg)
 #define stream_write32(ctx, reg, data) write32((ctx)->sdAddr + HDA_REG_##reg, data)
 #define stream_update32(ctx, reg, mask, val) stream_write32(ctx, reg, (stream_read32(ctx, reg) & ~(mask)) | (val))
+
+/* update register macro */
+#define hdac_update32(addr, reg, mask, val)		\
+	write32(addr + reg, ((read32(addr + reg) & ~(mask)) | (val)))
+
+#define hdac_update16(addr, reg, mask, val)		\
+	write16(addr + reg,((read16(addr + reg) & ~(mask)) | (val)))

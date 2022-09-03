@@ -112,6 +112,7 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 		}
 	}
 
+	DbgPrint("Fmt: %x\n", format);
 	stream_write16(stream, SD_FORMAT, format);
 
 	int frags = 0;
@@ -139,8 +140,7 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 			 * only when the whole fragment is processed
 			 */
 			size -= chunk;
-			BOOLEAN with_ioc = FALSE;
-			bdl[3] = (size || !with_ioc) ? 0 : 1;
+			bdl[3] = (size > 0) ? 0 : 1;
 			bdl += 4;
 			frags++;
 			offset += chunk;

@@ -502,6 +502,7 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	}
 
 	MmFreePagesFromMdlEx(stream->mdlBuf, MM_DONT_ZERO_ALLOCATION);
+	ExFreePool(stream->mdlBuf);
 	stream->mdlBuf = NULL;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);

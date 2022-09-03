@@ -287,6 +287,8 @@ Fdo_EvtDevicePrepareHardware(
                 PHYSICAL_ADDRESS maxAddr;
                 maxAddr.QuadPart = MAXULONG64;
                 stream->bdl = (UINT32 *)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
+
+                stream->spib_addr = NULL;
             }
 
             SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,

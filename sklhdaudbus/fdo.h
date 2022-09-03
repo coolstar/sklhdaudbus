@@ -38,6 +38,8 @@ typedef struct _HDAC_STREAM {
     UINT8* sdAddr;
     UINT32 int_sta_mask;
 
+    UINT8* spib_addr;
+
     UINT8 streamTag;
     UINT8 idx;
 
@@ -66,11 +68,11 @@ typedef struct _FDO_CONTEXT
     BUS_INTERFACE_STANDARD BusInterface; //PCI Bus Interface
     WDFINTERRUPT Interrupt;
 
-    PVOID ppcap;
-    PVOID spbcap;
-    PVOID mlcap;
-    PVOID gtscap;
-    PVOID drsmcap;
+    UINT8* ppcap;
+    UINT8 *spbcap;
+    UINT8* mlcap;
+    UINT8* gtscap;
+    UINT8* drsmcap;
 
     UINT32 captureIndexOff;
     UINT32 playbackIndexOff;
