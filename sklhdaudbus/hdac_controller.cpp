@@ -160,6 +160,41 @@ NTSTATUS hdac_bus_send_cmd(PFDO_CONTEXT fdoCtx, unsigned int val) {
 
 #define HDA_RIRB_EX_UNSOL_EV	(1<<4)
 
+void hdac_bus_process_unsol_events(WDFWORKITEM workItem) {
+	WDFDEVICE wdfDevice = (WDFDEVICE)WdfWorkItemGetParentObject(workItem);
+	PFDO_CONTEXT fdoCtx = Fdo_GetContext(wdfDevice);
+
+	UINT rp, caddr, res;
+	while (fdoCtx->unsol_rp != fdoCtx->unsol_wp) {
+		rp = (fdoCtx->unsol_rp + 1) % HDA_UNSOL_QUEUE_SIZE;
+		fdoCtx->unsol_rp = rp;
+		rp <<= 1;
+		res = fdoCtx->unsol_queue[rp];
+		caddr = fdoCtx->unsol_queue[rp + 1];
+
+		if (!(caddr & (1 << 4))) //no unsolicited event
+			continue;
+
+		UINT8 addr = caddr & 0x0f;
+		PPDO_DEVICE_DATA codec = fdoCtx->codecs[addr];
+		if (!codec || codec->FdoContext != fdoCtx)
+			continue;
+
+		HDAUDIO_CODEC_RESPONSE response;
+		RtlZeroMemory(&response, sizeof(HDAUDIO_CODEC_RESPONSE));
+
+		response.Response = res;
+		response.IsUnsolicitedResponse = 1;
+
+		UINT tag = response.Unsolicited.Tag;
+		if (codec->unsolitCallbacks[tag].inUse && codec->unsolitCallbacks[tag].Routine) {
+
+
+			codec->unsolitCallbacks[tag].Routine(response, codec->unsolitCallbacks[tag].Context);
+		}
+	}
+}
+
 void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 	UINT rp, wp;
 	UINT32 res, res_ex;
@@ -198,36 +233,7 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->unsol_queue[wp] = res;
 			fdoCtx->unsol_queue[wp + 1] = res_ex;
 
-			//TODO: move next loop to workitem?
-			UINT rp, caddr, res;
-			while (fdoCtx->unsol_rp != fdoCtx->unsol_wp) {
-				rp = (fdoCtx->unsol_rp + 1) % HDA_UNSOL_QUEUE_SIZE;
-				fdoCtx->unsol_rp = rp;
-				rp <<= 1;
-				res = fdoCtx->unsol_queue[rp];
-				caddr = fdoCtx->unsol_queue[rp + 1];
-
-				if (!(caddr & (1 << 4))) //no unsolicited event
-					continue;
-
-				UINT8 addr = caddr & 0x0f;
-				PPDO_DEVICE_DATA codec = fdoCtx->codecs[addr];
-				if (!codec || codec->FdoContext != fdoCtx)
-					continue;
-
-				HDAUDIO_CODEC_RESPONSE response;
-				RtlZeroMemory(&response, sizeof(HDAUDIO_CODEC_RESPONSE));
-
-				response.Response = res;
-				response.IsUnsolicitedResponse = 1;
-
-				UINT tag = response.Unsolicited.Tag;
-				if (codec->unsolitCallbacks[tag].inUse && codec->unsolitCallbacks[tag].Routine) {
-
-					
-					codec->unsolitCallbacks[tag].Routine(response, codec->unsolitCallbacks[tag].Context);
-				}
-			}
+			WdfWorkItemEnqueue(fdoCtx->unsolWork);
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
 			fdoCtx->rirb.res[addr] = res;
