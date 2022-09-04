@@ -26,12 +26,12 @@
     <Configuration>Win8.1 Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
     <RootNamespace>sklhdaudbus_Package</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
     <ProjectName>sklhdaudbus Package</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <TargetVersion>WindowsV6.3</TargetVersion>
+    <TargetVersion>Windows10</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Utility</ConfigurationType>
@@ -39,7 +39,7 @@
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <TargetVersion>WindowsV6.3</TargetVersion>
+    <TargetVersion>Windows10</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Utility</ConfigurationType>
@@ -47,7 +47,7 @@
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <TargetVersion>WindowsV6.3</TargetVersion>
+    <TargetVersion>Windows10</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Utility</ConfigurationType>
@@ -55,7 +55,7 @@
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <TargetVersion>WindowsV6.3</TargetVersion>
+    <TargetVersion>Windows10</TargetVersion>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Utility</ConfigurationType>
