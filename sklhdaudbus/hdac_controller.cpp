@@ -50,6 +50,7 @@ void hdac_bus_init_cmd_io(PFDO_CONTEXT fdoCtx) {
 
 	fdoCtx->rirb.buf = (UINT32 *)((UINT8*)fdoCtx->rb + 0x800);
 	fdoCtx->rirb.addr = MmGetPhysicalAddress(fdoCtx->rirb.buf);
+	RtlZeroMemory(fdoCtx->rirb.cmds, sizeof(fdoCtx->rirb.cmds));
 	hda_write32(fdoCtx, RIRBLBASE, fdoCtx->rirb.addr.LowPart);
 	hda_write32(fdoCtx, RIRBUBASE, fdoCtx->rirb.addr.HighPart);
 
@@ -186,7 +187,7 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 		addr = res_ex & 0xf;
 		if (addr >= HDA_MAX_CODECS) {
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-				"spurious response % #x: % #x, rp = % d, wp = % d\n",
+				"spurious response %#x: %#x, rp = % d, wp = % d\n",
 				res, res_ex, fdoCtx->rirb.rp, wp);
 		}
 		else if (res_ex & HDA_RIRB_EX_UNSOL_EV) {
@@ -288,14 +289,14 @@ void hdac_bus_enter_link_reset(PFDO_CONTEXT fdoCtx) {
 }
 
 void hdac_bus_exit_link_reset(PFDO_CONTEXT fdoCtx) {
-	hda_update32(fdoCtx, GCTL, HDA_GCTL_RESET, HDA_GCTL_RESET);
+	hda_update8(fdoCtx, GCTL, HDA_GCTL_RESET, HDA_GCTL_RESET);
 
 	LARGE_INTEGER StartTime;
 	KeQuerySystemTimePrecise(&StartTime);
 
 	int timeout_ms = 100;
 
-	while (!hda_read32(fdoCtx, GCTL)) {
+	while (!hda_read8(fdoCtx, GCTL)) {
 		LARGE_INTEGER CurrentTime;
 		KeQuerySystemTimePrecise(&CurrentTime);
 
@@ -309,8 +310,8 @@ void hdac_bus_exit_link_reset(PFDO_CONTEXT fdoCtx) {
 NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
     /* clear STATESTS if not in reset */
 
-    if (hda_read32(fdoCtx, GCTL) & HDA_GCTL_RESET)
-        hda_write32(fdoCtx, STATESTS, STATESTS_INT_MASK);
+    if (hda_read8(fdoCtx, GCTL) & HDA_GCTL_RESET)
+        hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
 
 	// Reset Controller
 	hdac_bus_enter_link_reset(fdoCtx);
@@ -329,7 +330,7 @@ NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
 	udelay(1000);
 
 	// Check if controller is ready
-	if (!hda_read32(fdoCtx, GCTL)) {
+	if (!hda_read8(fdoCtx, GCTL)) {
 		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT,
 			"Controller not ready!\n");
 		return STATUS_DEVICE_POWER_FAILURE;
@@ -353,7 +354,7 @@ void hda_int_clear(PFDO_CONTEXT fdoCtx) {
 	hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
 
 	//Clear rirb status
-	hda_write16(fdoCtx, RIRBSTS, RIRB_INT_MASK);
+	hda_write8(fdoCtx, RIRBSTS, RIRB_INT_MASK);
 
 	//Clear int status
 	hda_write32(fdoCtx, INTSTS, HDA_INT_CTRL_EN | HDA_INT_ALL_STREAM);
@@ -408,6 +409,20 @@ void hdac_bus_stop(PFDO_CONTEXT fdoCtx) {
 	}
 }
 
+int hda_stream_interrupt(PFDO_CONTEXT fdoCtx, unsigned int status) {
+	int handled = 0;
+
+	for (int i = 0; i < fdoCtx->numStreams; i++) {
+		PHDAC_STREAM stream = &fdoCtx->streams[i];
+		if (status & stream->int_sta_mask) {
+			UINT8 sd_status = stream_read8(stream, SD_STS);
+			stream_write8(stream, SD_STS, SD_INT_MASK);
+			handled |= 1 << stream->idx;
+		}
+	}
+	return handled;
+}
+
 BOOLEAN hda_interrupt(
 	WDFINTERRUPT Interrupt,
 	ULONG MessageID) {
@@ -433,7 +448,8 @@ BOOLEAN hda_interrupt(
 		handled = TRUE;
 		active = FALSE;
 
-		//handle stream IRQ
+		if (hda_stream_interrupt(fdoCtx, status))
+			active = TRUE;
 
 		status = hda_read16(fdoCtx, RIRBSTS);
 		if (status & RIRB_INT_MASK) {
