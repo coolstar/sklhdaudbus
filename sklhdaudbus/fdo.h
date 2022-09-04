@@ -89,6 +89,7 @@ typedef struct _FDO_CONTEXT
     //unsolicited events
     UINT32 unsol_queue[HDA_UNSOL_QUEUE_SIZE * 2];
     UINT unsol_rp, unsol_wp;
+    WDFWORKITEM unsolWork;
 
     //bit flags of detected codecs
     UINT16 codecMask;

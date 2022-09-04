@@ -144,6 +144,19 @@ Fdo_Initialize(
         return status;
     }
 
+    WDF_WORKITEM_CONFIG workItemConfig;
+    WDF_WORKITEM_CONFIG_INIT(&workItemConfig, hdac_bus_process_unsol_events);
+
+    WDF_OBJECT_ATTRIBUTES objectAttrs;
+    WDF_OBJECT_ATTRIBUTES_INIT(&objectAttrs);
+    objectAttrs.ParentObject = device;
+    status = WdfWorkItemCreate(&workItemConfig, &objectAttrs, &FdoCtx->unsolWork);
+    if (!NT_SUCCESS(status)) {
+        SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_PNP,
+            "Error creating WDF workitem - %!STATUS!", status);
+        return status;
+    }
+
     return STATUS_SUCCESS;
 }
 
@@ -317,6 +330,10 @@ Fdo_EvtDeviceReleaseHardware(
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
+
+    if (fdoCtx->unsolWork) {
+        WdfWorkItemFlush(fdoCtx->unsolWork);
+    }
 
     if (fdoCtx->posbuf)
         MmFreeContiguousMemory(fdoCtx->posbuf);
