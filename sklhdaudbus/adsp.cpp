@@ -227,9 +227,9 @@ NTSTATUS ADSPCleanupDSP(_In_ PVOID _context, _In_ HANDLE Handle) {
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 
-	hdac_stream_stop(stream);
-	hdac_stream_reset(stream);
-	hdac_stream_stop(stream);
+	stream_write32(stream, SD_BDLPL, 0);
+	stream_write32(stream, SD_BDLPU, 0);
+	stream_write32(stream, SD_CTL, 0);
 
 	if (stream->virtAddr) {
 		MmUnmapLockedPages(stream->virtAddr, stream->mdlBuf);

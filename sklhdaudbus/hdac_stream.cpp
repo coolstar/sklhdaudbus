@@ -48,8 +48,6 @@ void hdac_stream_reset(PHDAC_STREAM stream) {
 			break;
 	} while (--timeout);
 
-	//TODO: check if dma stop delay is needed
-
 	val &= ~SD_CTL_STREAM_RESET;
 	stream_write8(stream, SD_CTL, val);
 	udelay(3);
