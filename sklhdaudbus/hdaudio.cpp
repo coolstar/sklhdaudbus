@@ -417,8 +417,8 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	UINT32 minBuf = 0x1000 * 250;
-	PMDL mdl = MmAllocatePagesForMdl(lowAddr, maxAddr, skipBytes, minBuf);
+	//UINT32 minBuf = 0x1000 * 250;
+	PMDL mdl = MmAllocatePagesForMdl(lowAddr, maxAddr, skipBytes, RequestedBufferSize);
 	if (!mdl) {
 		return STATUS_NO_MEMORY;
 	}
@@ -429,11 +429,11 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 
 	stream->virtAddr = (UINT8*)MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmWriteCombined, NULL, FALSE, MdlMappingNoExecute | NormalPagePriority);
 
-	UINT32 smallestCopy = min(stream->bufSz, crabrave_size);
+	/*UINT32 smallestCopy = min(stream->bufSz, crabrave_size);
 	DbgPrint("Mapped Buf: 0x%llx\n", stream->virtAddr);
 	for (int i = 0; i < smallestCopy; i++) {
 		stream->virtAddr[i] = crabrave[i];
-	}
+	}*/
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
@@ -448,20 +448,15 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s: Requested %lld, got %lld bytes (Fifo %ld, offset %lld)\n", __func__, RequestedBufferSize, *AllocatedBufferSize, *FifoSize, *OffsetFromFirstPage);
 
-	if (devData->FdoContext->runCount == 3) {
+	/*if (devData->FdoContext->runCount == 3) {
 		hdac_stream_start(stream);
 
 		mdelay(5000);
 
 		hdac_stream_stop(stream);
-	}
-	else {
-		mdelay(1000);
-	}
+	}*/
 
 	devData->FdoContext->runCount++;
-
-	//TODO: Program DMA to device
 
 	return STATUS_SUCCESS;
 }
@@ -484,8 +479,6 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 		return STATUS_INVALID_HANDLE;
 	}
 
-	hdac_stream_stop(stream);
-
 	if (stream->prepared || stream->running) {
 		return STATUS_INVALID_DEVICE_REQUEST;
 	}
@@ -495,6 +488,10 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	}
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+
+	stream_write32(stream, SD_BDLPL, 0);
+	stream_write32(stream, SD_BDLPU, 0);
+	stream_write32(stream, SD_CTL, 0);
 
 	if (stream->virtAddr) {
 		MmUnmapLockedPages(stream->virtAddr, stream->mdlBuf);
@@ -508,9 +505,6 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s done!\n", __func__);
-	mdelay(1000);
-
-	//TODO: Deprogram DMA from device
 
 	return STATUS_SUCCESS;
 }

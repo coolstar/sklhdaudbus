@@ -231,185 +231,6 @@ Fdo_EvtDevicePrepareHardware(
     fdoCtx->BusInterface.GetBusData(fdoCtx->BusInterface.Context, PCI_WHICHSPACE_CONFIG, &fdoCtx->venId, 0, sizeof(UINT16));
     fdoCtx->BusInterface.GetBusData(fdoCtx->BusInterface.Context, PCI_WHICHSPACE_CONFIG, &fdoCtx->devId, 2, sizeof(UINT16));
 
-    UINT32 gcap = hda_read32(fdoCtx, GCAP);
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "chipset global capabilities = 0x%x\n", gcap);
-
-    fdoCtx->captureStreams = (gcap >> 8) & 0x0f;
-    fdoCtx->playbackStreams = (gcap >> 12) & 0x0f;
-
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "streams (cap %d, playback %d)\n", fdoCtx->captureStreams, fdoCtx->playbackStreams);
-
-    fdoCtx->captureIndexOff = 0;
-    fdoCtx->playbackIndexOff = fdoCtx->captureStreams;
-    fdoCtx->numStreams = fdoCtx->captureStreams + fdoCtx->playbackStreams;
-
-    fdoCtx->streams = (PHDAC_STREAM)ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
-    if (!fdoCtx->streams) {
-        return STATUS_NO_MEMORY;
-    }
-    RtlZeroMemory(fdoCtx->streams, sizeof(HDAC_STREAM) * fdoCtx->numStreams);
-
-    PHYSICAL_ADDRESS maxAddr;
-    maxAddr.QuadPart = MAXULONG64;
-
-    fdoCtx->posbuf = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
-    RtlZeroMemory(fdoCtx->posbuf, PAGE_SIZE);
-    if (!fdoCtx->posbuf) {
-        return STATUS_NO_MEMORY;
-    }
-
-    fdoCtx->rb = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
-    RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
-
-    if (!fdoCtx->rb) {
-        return STATUS_NO_MEMORY;
-    }
-
-    //Init Streams
-    {
-        UINT32 i;
-        int streamTags[2] = { 0, 0 };
-
-        for (i = 0; i < fdoCtx->numStreams; i++) {
-            int dir = (i >= fdoCtx->captureIndexOff &&
-                i < fdoCtx->captureIndexOff + fdoCtx->captureStreams);
-            /* stream tag must be unique throughout
-             * the stream direction group,
-             * valid values 1...15
-             * use separate stream tag
-             */
-            int tag = ++streamTags[dir];
-
-            {
-                PHDAC_STREAM stream = &fdoCtx->streams[i];
-                stream->FdoContext = fdoCtx;
-                /* offset: SDI0=0x80, SDI1=0xa0, ... SDO3=0x160 */
-                stream->sdAddr = fdoCtx->m_BAR0.Base.baseptr + (0x20 * i + 0x80);
-                /* int mask: SDI0=0x01, SDI1=0x02, ... SDO3=0x80 */
-                stream->int_sta_mask = 1 << i;
-                stream->idx = i;
-                stream->direction = dir;
-                if (fdoCtx->venId == VEN_INTEL)
-                    stream->streamTag = tag;
-                else
-                    stream->streamTag = i + 1;
-                stream->posbuf = (UINT32 *)(((UINT8 *)fdoCtx->posbuf) + (i * 8));
-
-                PHYSICAL_ADDRESS maxAddr;
-                maxAddr.QuadPart = MAXULONG64;
-                stream->bdl = (UINT32 *)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
-
-                stream->spib_addr = NULL;
-            }
-
-            SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-                "Stream tag (idx %d): %d\n", i, tag);
-        }
-    }
-
-    WdfWaitLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &fdoCtx->cmdLock);
-
-    status = STATUS_SUCCESS;
-
-    return status;
-}
-
-NTSTATUS
-Fdo_EvtDeviceReleaseHardware(
-    _In_ WDFDEVICE Device,
-    _In_ WDFCMRESLIST ResourcesTranslated
-)
-{
-    PFDO_CONTEXT fdoCtx;
-
-    UNREFERENCED_PARAMETER(ResourcesTranslated);
-
-    fdoCtx = Fdo_GetContext(Device);
-
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "%s\n", __func__);
-
-    if (fdoCtx->unsolWork) {
-        WdfWorkItemFlush(fdoCtx->unsolWork);
-    }
-
-    if (fdoCtx->posbuf)
-        MmFreeContiguousMemory(fdoCtx->posbuf);
-    if (fdoCtx->rb)
-        MmFreeContiguousMemory(fdoCtx->rb);
-
-    if (fdoCtx->streams) {
-        for (int i = 0; i < fdoCtx->numStreams; i++) {
-            PHDAC_STREAM stream = &fdoCtx->streams[i];
-            if (stream->bdl) {
-                MmFreeContiguousMemory(stream->bdl);
-                stream->bdl = NULL;
-            }
-        }
-
-        ExFreePoolWithTag(fdoCtx->streams, SKLHDAUDBUS_POOL_TAG);
-    }
-
-    if (fdoCtx->m_BAR0.Base.Base)
-        MmUnmapIoSpace(fdoCtx->m_BAR0.Base.Base, fdoCtx->m_BAR0.Len);
-    if (fdoCtx->m_BAR4.Base.Base)
-        MmUnmapIoSpace(fdoCtx->m_BAR4.Base.Base, fdoCtx->m_BAR4.Len);
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-Fdo_EvtDeviceD0Entry(
-    _In_ WDFDEVICE Device,
-    _In_ WDF_POWER_DEVICE_STATE PreviousState
-)
-{
-    NTSTATUS status;
-    PFDO_CONTEXT fdoCtx;
-
-    fdoCtx = Fdo_GetContext(Device);
-
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "%s\n", __func__);
-
-    status = STATUS_SUCCESS;
-
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "Clearing TCSEL\n");
-    update_pci_byte(&fdoCtx->BusInterface, HDA_PCIREG_TCSEL, 0x07, 0);
-
-    if (fdoCtx->venId == VEN_INTEL) {
-        UINT32 val;
-        pci_read_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, &val);
-        val = val & ~INTEL_HDA_CGCTL_MISCBDCGE;
-        pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
-    }
-
-    hdac_bus_init(fdoCtx);
-
-    if (fdoCtx->venId == VEN_INTEL) {
-        UINT32 val;
-        pci_read_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, &val);
-        val = val & ~INTEL_HDA_CGCTL_MISCBDCGE;
-        pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
-    }
-
-    //Reduce dma latency to avoid noise
-    if (IS_BXT(fdoCtx->venId, fdoCtx->devId)) {
-        /*
-         * In BXT-P A0, HD-Audio DMA requests is later than expected,
-         * and makes an audio stream sensitive to system latencies when
-         * 24/32 bits are playing.
-         * Adjusting threshold of DMA fifo to force the DMA request
-         * sooner to improve latency tolerance at the expense of power.
-         */
-        UINT32 val = hda_read32(fdoCtx, VS_EM4L);
-        val &= (0x3 << 20);
-        hda_write32(fdoCtx, VS_EM4L, val);
-    }
-
     //mlcap & lctl (hda_intel_init_chip)
     if (fdoCtx->venId == VEN_INTEL) {
         //read bus capabilities
@@ -491,6 +312,182 @@ Fdo_EvtDeviceD0Entry(
             offset = cur_cap & HDA_CAP_HDR_NXT_PTR_MASK;
 
         } while (offset);
+    }
+
+    UINT16 gcap = hda_read16(fdoCtx, GCAP);
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "chipset global capabilities = 0x%x\n", gcap);
+
+    fdoCtx->captureStreams = (gcap >> 8) & 0x0f;
+    fdoCtx->playbackStreams = (gcap >> 12) & 0x0f;
+
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "streams (cap %d, playback %d)\n", fdoCtx->captureStreams, fdoCtx->playbackStreams);
+
+    fdoCtx->captureIndexOff = 0;
+    fdoCtx->playbackIndexOff = fdoCtx->captureStreams;
+    fdoCtx->numStreams = fdoCtx->captureStreams + fdoCtx->playbackStreams;
+
+    fdoCtx->streams = (PHDAC_STREAM)ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
+    if (!fdoCtx->streams) {
+        return STATUS_NO_MEMORY;
+    }
+    RtlZeroMemory(fdoCtx->streams, sizeof(HDAC_STREAM) * fdoCtx->numStreams);
+
+    PHYSICAL_ADDRESS maxAddr;
+    maxAddr.QuadPart = MAXULONG32;
+
+    fdoCtx->posbuf = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
+    RtlZeroMemory(fdoCtx->posbuf, PAGE_SIZE);
+    if (!fdoCtx->posbuf) {
+        return STATUS_NO_MEMORY;
+    }
+
+    /*fdoCtx->rb = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
+    RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
+
+    if (!fdoCtx->rb) {
+        return STATUS_NO_MEMORY;
+    }*/
+
+    //Init Streams
+    {
+        UINT32 i;
+        int streamTags[2] = { 0, 0 };
+
+        for (i = 0; i < fdoCtx->numStreams; i++) {
+            int dir = (i >= fdoCtx->captureIndexOff &&
+                i < fdoCtx->captureIndexOff + fdoCtx->captureStreams);
+            /* stream tag must be unique throughout
+             * the stream direction group,
+             * valid values 1...15
+             * use separate stream tag
+             */
+            int tag = ++streamTags[dir];
+
+            {
+                PHDAC_STREAM stream = &fdoCtx->streams[i];
+                stream->FdoContext = fdoCtx;
+                /* offset: SDI0=0x80, SDI1=0xa0, ... SDO3=0x160 */
+                stream->sdAddr = fdoCtx->m_BAR0.Base.baseptr + (0x20 * i + 0x80);
+                /* int mask: SDI0=0x01, SDI1=0x02, ... SDO3=0x80 */
+                stream->int_sta_mask = 1 << i;
+                stream->idx = i;
+                stream->direction = dir;
+                if (fdoCtx->venId == VEN_INTEL)
+                    stream->streamTag = tag;
+                else
+                    stream->streamTag = i + 1;
+                stream->posbuf = (UINT32 *)(((UINT8 *)fdoCtx->posbuf) + (i * 8));
+
+                if (fdoCtx->ppcap) {
+                    stream->pphc_addr = fdoCtx->ppcap + HDA_PPHC_BASE +
+                        (HDA_PPHC_INTERVAL * stream->idx);
+                    stream->pplc_addr = fdoCtx->ppcap + HDA_PPLC_BASE +
+                        (HDA_PPLC_MULTI * fdoCtx->numStreams) +
+                        (HDA_PPLC_INTERVAL * stream->idx);
+                }
+
+                if (fdoCtx->spbcap) {
+                    stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB;
+                    DbgPrint("SPIB offset: 0x%x\n", HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB);
+                }
+
+                PHYSICAL_ADDRESS maxAddr;
+                maxAddr.QuadPart = MAXULONG32;
+                stream->bdl = (UINT32 *)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
+
+                stream->spib_addr = NULL;
+            }
+
+            SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+                "Stream tag (idx %d): %d\n", i, tag);
+        }
+    }
+
+    WdfWaitLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &fdoCtx->cmdLock);
+
+    status = STATUS_SUCCESS;
+
+    return status;
+}
+
+NTSTATUS
+Fdo_EvtDeviceReleaseHardware(
+    _In_ WDFDEVICE Device,
+    _In_ WDFCMRESLIST ResourcesTranslated
+)
+{
+    PFDO_CONTEXT fdoCtx;
+
+    UNREFERENCED_PARAMETER(ResourcesTranslated);
+
+    fdoCtx = Fdo_GetContext(Device);
+
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "%s\n", __func__);
+
+    if (fdoCtx->unsolWork) {
+        WdfWorkItemFlush(fdoCtx->unsolWork);
+    }
+
+    if (fdoCtx->posbuf)
+        MmFreeContiguousMemory(fdoCtx->posbuf);
+    if (fdoCtx->rb)
+        MmFreeContiguousMemory(fdoCtx->rb);
+
+    if (fdoCtx->streams) {
+        for (int i = 0; i < fdoCtx->numStreams; i++) {
+            PHDAC_STREAM stream = &fdoCtx->streams[i];
+            if (stream->bdl) {
+                MmFreeContiguousMemory(stream->bdl);
+                stream->bdl = NULL;
+            }
+        }
+
+        ExFreePoolWithTag(fdoCtx->streams, SKLHDAUDBUS_POOL_TAG);
+    }
+
+    if (fdoCtx->m_BAR0.Base.Base)
+        MmUnmapIoSpace(fdoCtx->m_BAR0.Base.Base, fdoCtx->m_BAR0.Len);
+    if (fdoCtx->m_BAR4.Base.Base)
+        MmUnmapIoSpace(fdoCtx->m_BAR4.Base.Base, fdoCtx->m_BAR4.Len);
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+Fdo_EvtDeviceD0Entry(
+    _In_ WDFDEVICE Device,
+    _In_ WDF_POWER_DEVICE_STATE PreviousState
+)
+{
+    NTSTATUS status;
+    PFDO_CONTEXT fdoCtx;
+
+    fdoCtx = Fdo_GetContext(Device);
+
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "%s\n", __func__);
+
+    status = STATUS_SUCCESS;
+
+    if (fdoCtx->venId == VEN_INTEL) {
+        UINT32 val;
+        pci_read_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, &val);
+        val = val & ~INTEL_HDA_CGCTL_MISCBDCGE;
+        pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
+    }
+
+    hdac_bus_init(fdoCtx);
+
+    if (fdoCtx->venId == VEN_INTEL) {
+        UINT32 val;
+        pci_read_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, &val);
+        val = val | INTEL_HDA_CGCTL_MISCBDCGE;
+        pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
+
+        hda_update32(fdoCtx, VS_EM2, HDA_VS_EM2_DUM, HDA_VS_EM2_DUM);
     }
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,

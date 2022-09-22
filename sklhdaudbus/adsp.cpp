@@ -104,11 +104,6 @@ NTSTATUS ADSPGetRenderStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFo
 		}
 		DbgPrint("Stream index: %d, tag: %d\n", stream->idx, stream->streamTag);
 
-		if (fdoContext->spbcap) {
-			stream->spib_addr = fdoContext->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB;
-			DbgPrint("SPIB offset: 0x%x\n", HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB);
-		}
-
 		if (Handle)
 			*Handle = (HANDLE)stream;
 		if (streamTag)
@@ -189,7 +184,7 @@ NTSTATUS ADSPPrepareDSP(
 	PHYSICAL_ADDRESS zeroAddr;
 	zeroAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
-	maxAddr.QuadPart = MAXUINT64;
+	maxAddr.QuadPart = MAXULONG32;
 	PMDL mdl = MmAllocatePagesForMdl(zeroAddr, maxAddr, zeroAddr, ByteSize);
 	if (!mdl) {
 		return STATUS_NO_MEMORY;
@@ -330,6 +325,7 @@ ADSP_BUS_INTERFACE ADSP_BusInterface(PVOID Context) {
 	busInterface.PrepareDSP = ADSPPrepareDSP;
 	busInterface.CleanupDSP = ADSPCleanupDSP;
 	busInterface.TriggerDSP = ADSPStartStopDSP;
+
 	busInterface.DSPEnableSPIB = ADSPEnableSPIB;
 	busInterface.DSPDisableSPIB = ADSPDisableSPIB;
 

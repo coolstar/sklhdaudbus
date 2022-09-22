@@ -1,6 +1,8 @@
 #include "driver.h"
 
 void hdac_stream_start(PHDAC_STREAM stream) {
+	DbgPrint("Wallclk: %d\n", hda_read32(stream->FdoContext, WALLCLK));
+
 	/* enable SIE */
 	hda_update32(stream->FdoContext, INTCTL, 1 << stream->idx, 1 << stream->idx);
 
@@ -64,31 +66,13 @@ void hdac_stream_reset(PHDAC_STREAM stream) {
 		*stream->posbuf = 0;
 }
 
-void hdac_stream_setup(PHDAC_STREAM stream) {
-	/* make sure the run bit is zero for SD */
-	hdac_stream_clear(stream);
-
-	UINT val;
-	/* program the stream_tag */
-	val = stream_read32(stream, SD_CTL);
-	val = (val & ~SD_CTL_STREAM_TAG_MASK) |
-		(stream->streamTag << SD_CTL_STREAM_TAG_SHIFT);
-	DbgPrint("ctl (tag %d): 0x%x\n", stream->streamTag, val);
-	stream_write32(stream, SD_CTL, val);
-
-	/* program the length of samples in cyclic buffer */
-	stream_write32(stream, SD_CBL, stream->bufSz);
-
-	/* program the stream format */
-	/* this value needs to be the same as the one programmed */
-	UINT format = 0;
-	format = HDA_RATE(48, 1, 1);
-
+UINT hdac_format(PHDAC_STREAM stream) {
+	UINT format = HDA_RATE(48, 1, 1);
 	{
 		UINT channels = stream->streamFormat.NumberOfChannels;
 		DbgPrint("Channels: %d\n", channels);
 		if (channels == 0 || channels > 8)
-			return;
+			return 0;
 		format |= channels - 1;
 
 		switch (stream->streamFormat.ContainerSize) {
@@ -109,9 +93,20 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 			break;
 		}
 	}
+	return format;
+}
 
-	DbgPrint("sdfmt: 0x%x\n", format);
-	stream_write16(stream, SD_FORMAT, format);
+void hdac_stream_setup(PHDAC_STREAM stream) {
+	/* make sure the run bit is zero for SD */
+	hdac_stream_clear(stream);
+
+	UINT val;
+	/* program the stream_tag */
+	val = stream_read32(stream, SD_CTL);
+	val = (val & ~SD_CTL_STREAM_TAG_MASK) |
+		(stream->streamTag << SD_CTL_STREAM_TAG_SHIFT);
+	DbgPrint("ctl (tag %d): 0x%x\n", stream->streamTag, val);
+	stream_write32(stream, SD_CTL, val);
 
 	int frags = 0;
 	{
@@ -145,6 +140,15 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 		}
 	}
 	DbgPrint("Buf Sz: %d, frags: %d\n", stream->bufSz, frags);
+	/* program the length of samples in cyclic buffer */
+	stream_write32(stream, SD_CBL, stream->bufSz);
+
+	/* program the stream format */
+	/* this value needs to be the same as the one programmed */
+	UINT format = hdac_format(stream);
+	DbgPrint("sdfmt: 0x%x\n", format);
+	stream_write16(stream, SD_FORMAT, format);
+
 	/* program the stream LVI (last valid index) of the BDL */
 	stream_write16(stream, SD_LVI, frags - 1);
 
@@ -154,6 +158,7 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	stream_write32(stream, SD_BDLPL, bdlAddr.LowPart);
 	/* upper BDL address */
 	stream_write32(stream, SD_BDLPU, bdlAddr.HighPart);
+	DbgPrint("BDL: 0x%x 0x%x\n", bdlAddr.LowPart, bdlAddr.HighPart);
 
 	//Enable position buffer
 	if (!(hda_read32(stream->FdoContext, DPLBASE) & HDA_DPLBASE_ENABLE)){

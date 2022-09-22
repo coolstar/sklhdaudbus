@@ -124,9 +124,8 @@ enum { SDI0, SDI1, SDI2, SDI3, SDO0, SDO1, SDO2, SDO3 };
  */
 
  /* max number of fragments - we may use more if allocating more pages for BDL */
-#define BDL_SIZE		4096
+#define BDL_SIZE		4096 * 16 //TODO: reduce to 4096 later
 #define HDA_MAX_BDL_ENTRIES	(BDL_SIZE / 16)
-#define HDA_MAX_FRAG		32
 /*
  * max buffer size - artificial 4MB limit per stream to avoid big allocations
  * In theory it can be really big, but as it is per stream on systems with many streams memory could
@@ -299,3 +298,5 @@ enum { SDI0, SDI1, SDI2, SDI3, SDO0, SDO1, SDO2, SDO3 };
 #define INTEL_HDA_CGCTL_MISCBDCGE        (0x1 << 6)
 #define INTEL_SCH_HDA_DEVC      0x78
 #define INTEL_SCH_HDA_DEVC_NOSNOOP       (0x1<<11)
+
+#define HDA_VS_EM2_DUM			(1 << 23)

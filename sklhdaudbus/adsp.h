@@ -21,6 +21,8 @@ typedef void (*PDSP_START_STOP_STREAM)(_In_ PVOID _context, _In_ HANDLE Handle, 
 typedef void (*PDSP_ENABLE_SPIB)(_In_ PVOID _context, _In_ HANDLE Handle, UINT32 value);
 typedef void (*PDSP_DISABLE_SPIB)(_In_ PVOID _context, _In_ HANDLE Handle);
 
+typedef _Must_inspect_result_ NTSTATUS(*PDSP_GET_LINK)(_In_ PVOID _context, _In_ int addr, _Out_ PHANDLE Handle);
+typedef void (*PDSP_LINK_STREAM)(_In_ HANDLE Handle, _In_ int stream);
 
 typedef struct _ADSP_BUS_INTERFACE
 {
@@ -45,6 +47,7 @@ typedef struct _ADSP_BUS_INTERFACE
     PDSP_PREPARE_STREAM           PrepareDSP;
     PDSP_CLEANUP_STREAM           CleanupDSP;
     PDSP_START_STOP_STREAM        TriggerDSP;
+
     PDSP_ENABLE_SPIB              DSPEnableSPIB;
     PDSP_DISABLE_SPIB             DSPDisableSPIB;
 } ADSP_BUS_INTERFACE, * PADSP_BUS_INTERFACE;

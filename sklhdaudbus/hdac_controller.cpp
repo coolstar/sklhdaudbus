@@ -288,6 +288,7 @@ void hdac_bus_enter_link_reset(PFDO_CONTEXT fdoCtx) {
 		KeQuerySystemTimePrecise(&CurrentTime);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
+			DbgPrint("Enter link reset timeout\n");
 			return;
 		}
 		udelay(500);
@@ -307,6 +308,7 @@ void hdac_bus_exit_link_reset(PFDO_CONTEXT fdoCtx) {
 		KeQuerySystemTimePrecise(&CurrentTime);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
+			DbgPrint("Exit link reset timeout\n");
 			return;
 		}
 		udelay(500);
@@ -325,7 +327,7 @@ NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
 	/* delay for >= 100us for codec PLL to settle per spec
 	 * Rev 0.9 section 5.5.1
 	 */
-	udelay(500);
+	udelay(1000);
 
 	// Bring Controller out of reset
 
@@ -333,7 +335,7 @@ NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
 
 	// Wait >= 540us for codecs to initialize
 
-	udelay(1000);
+	udelay(1200);
 
 	// Check if controller is ready
 	if (!hda_read8(fdoCtx, GCTL)) {
@@ -377,7 +379,7 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 	//Clear Interrupts
 	hda_int_clear(fdoCtx);
 
-	hdac_bus_init_cmd_io(fdoCtx);
+	//hdac_bus_init_cmd_io(fdoCtx);
 
 	//Enable interrupts
 	hda_update32(fdoCtx, INTCTL, HDA_INT_CTRL_EN | HDA_INT_GLOBAL_EN,
@@ -385,6 +387,7 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 
 	//Program the position buffer
 	PHYSICAL_ADDRESS posbufAddr = MmGetPhysicalAddress(fdoCtx->posbuf);
+	DbgPrint("Use position bufs: %x %x\n", posbufAddr.LowPart, posbufAddr.HighPart);
 	hda_write32(fdoCtx, DPLBASE, posbufAddr.LowPart);
 	hda_write32(fdoCtx, DPUBASE, posbufAddr.HighPart);
 
@@ -406,7 +409,7 @@ void hdac_bus_stop(PFDO_CONTEXT fdoCtx) {
 	hda_int_clear(fdoCtx);
 
 	/* disable CORB/RIRB */
-	hdac_bus_stop_cmd_io(fdoCtx);
+	//hdac_bus_stop_cmd_io(fdoCtx);
 
 	/* disable position buffer */
 	if (fdoCtx->posbuf) {
@@ -444,6 +447,7 @@ BOOLEAN hda_interrupt(
 		}
 	}
 
+#if 0
 	BOOLEAN active, handled = FALSE;
 	int repeat = 0; //Avoid endless loop
 	do {
@@ -476,6 +480,8 @@ BOOLEAN hda_interrupt(
 	} while (active && ++repeat < 10);
 
 	return handled;
+#endif
+	return FALSE;
 }
 
 NTSTATUS hdac_bus_exec_verb_unlocked(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32 cmd, UINT32* res) {
