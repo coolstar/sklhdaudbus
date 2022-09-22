@@ -502,6 +502,41 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	ExFreePool(stream->mdlBuf);
 	stream->mdlBuf = NULL;
 
+	int frags = 0;
+	{
+		//Set up the BDL
+		UINT32* bdl = stream->bdl;
+		INT64 size = stream->bufSz;
+		UINT8* buf = stream->virtAddr;
+		DbgPrint("Buf: 0x%llx\n", buf);
+		UINT32 offset = 0;
+		while (size > 0) {
+			if (frags > HDA_MAX_BDL_ENTRIES) {
+				DbgPrint("Too many BDL entries!\n");
+				frags = HDA_MAX_BDL_ENTRIES;
+				break;
+			}
+
+			UINT32 chunk = PAGE_SIZE;
+			PHYSICAL_ADDRESS addr = MmGetPhysicalAddress(buf + offset);
+			/* program the address field of the BDL entry */
+			bdl[0] = addr.LowPart;
+			bdl[1] = addr.HighPart;
+			/* program the size field of the BDL entry */
+			bdl[2] = chunk;
+			/* program the IOC to enable interrupt
+			 * only when the whole fragment is processed
+			 */
+			size -= chunk;
+			bdl[3] = (size > 0) ? 0 : 1;
+			bdl += 4;
+			frags++;
+			offset += chunk;
+		}
+	}
+	DbgPrint("Buf Sz: %d, frags: %d\n", stream->bufSz, frags);
+	stream->frags = frags;
+
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s done!\n", __func__);

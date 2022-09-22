@@ -34,6 +34,7 @@ typedef struct _HDAC_STREAM {
     UINT32 bufSz;
     UINT32 periodBytes;
     UINT32 fifoSize;
+    int frags;
 
     UINT8* sdAddr;
     UINT32 int_sta_mask;

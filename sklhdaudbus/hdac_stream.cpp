@@ -108,38 +108,6 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	DbgPrint("ctl (tag %d): 0x%x\n", stream->streamTag, val);
 	stream_write32(stream, SD_CTL, val);
 
-	int frags = 0;
-	{
-		//Set up the BDL
-		UINT32* bdl = stream->bdl;
-		INT64 size = stream->bufSz;
-		UINT8* buf = stream->virtAddr;
-		DbgPrint("Buf: 0x%llx\n", buf);
-		UINT32 offset = 0;
-		while (size > 0) {
-			if (frags > HDA_MAX_BDL_ENTRIES) {
-				DbgPrint("Too many BDL entries!\n");
-				return;
-			}
-
-			UINT32 chunk = PAGE_SIZE;
-			PHYSICAL_ADDRESS addr = MmGetPhysicalAddress(buf + offset);
-			/* program the address field of the BDL entry */
-			bdl[0] = addr.LowPart;
-			bdl[1] = addr.HighPart;
-			/* program the size field of the BDL entry */
-			bdl[2] = chunk;
-			/* program the IOC to enable interrupt
-			 * only when the whole fragment is processed
-			 */
-			size -= chunk;
-			bdl[3] = (size > 0) ? 0 : 1;
-			bdl += 4;
-			frags++;
-			offset += chunk;
-		}
-	}
-	DbgPrint("Buf Sz: %d, frags: %d\n", stream->bufSz, frags);
 	/* program the length of samples in cyclic buffer */
 	stream_write32(stream, SD_CBL, stream->bufSz);
 
@@ -150,7 +118,7 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	stream_write16(stream, SD_FORMAT, format);
 
 	/* program the stream LVI (last valid index) of the BDL */
-	stream_write16(stream, SD_LVI, frags - 1);
+	stream_write16(stream, SD_LVI, stream->frags - 1);
 
 	/* program the BDL address */
 	/* lower BDL address */

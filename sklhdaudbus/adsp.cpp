@@ -160,7 +160,8 @@ NTSTATUS ADSPPrepareDSP(
 	_In_ PVOID _context,
 	_In_ HANDLE Handle,
 	_In_ unsigned int ByteSize,
-	_Out_ PVOID* mdlBuf
+	_In_ int frags,
+	_Out_ PVOID* bdlBuf
 ) {
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
@@ -185,16 +186,11 @@ NTSTATUS ADSPPrepareDSP(
 	zeroAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
 	maxAddr.QuadPart = MAXULONG64;
-	PMDL mdl = MmAllocatePagesForMdl(zeroAddr, maxAddr, zeroAddr, ByteSize);
-	if (!mdl) {
-		return STATUS_NO_MEMORY;
-	}
 
-	stream->mdlBuf = mdl;
-	stream->bufSz = min(ByteSize, MmGetMdlByteCount(mdl));
-	stream->virtAddr = (UINT8*)MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmWriteCombined, NULL, FALSE, MdlMappingNoExecute | NormalPagePriority);
-
-	DbgPrint("Requested %d bytes, got %d. Using %d\n", ByteSize, MmGetMdlByteCount(mdl), stream->bufSz);
+	stream->mdlBuf = NULL;
+	stream->bufSz = ByteSize;
+	stream->frags = frags;
+	stream->virtAddr = NULL;
 
 	hdac_stream_reset(stream);
 
@@ -204,8 +200,8 @@ NTSTATUS ADSPPrepareDSP(
 
 	hdac_stream_setup(stream);
 
-	if (mdlBuf)
-		*mdlBuf = stream->virtAddr;
+	if (bdlBuf)
+		*bdlBuf = stream->bdl;
 	return STATUS_SUCCESS;
 }
 
@@ -225,14 +221,6 @@ NTSTATUS ADSPCleanupDSP(_In_ PVOID _context, _In_ HANDLE Handle) {
 	stream_write32(stream, SD_BDLPL, 0);
 	stream_write32(stream, SD_BDLPU, 0);
 	stream_write32(stream, SD_CTL, 0);
-
-	if (stream->virtAddr) {
-		MmUnmapLockedPages(stream->virtAddr, stream->mdlBuf);
-		stream->virtAddr = NULL;
-	}
-	MmFreePagesFromMdlEx(stream->mdlBuf, MM_DONT_ZERO_ALLOCATION);
-	ExFreePool(stream->mdlBuf);
-	stream->mdlBuf = NULL;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
