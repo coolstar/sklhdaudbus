@@ -335,7 +335,7 @@ Fdo_EvtDevicePrepareHardware(
     RtlZeroMemory(fdoCtx->streams, sizeof(HDAC_STREAM) * fdoCtx->numStreams);
 
     PHYSICAL_ADDRESS maxAddr;
-    maxAddr.QuadPart = MAXULONG32;
+    maxAddr.QuadPart = MAXULONG64;
 
     fdoCtx->posbuf = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
     RtlZeroMemory(fdoCtx->posbuf, PAGE_SIZE);
@@ -388,16 +388,15 @@ Fdo_EvtDevicePrepareHardware(
                         (HDA_PPLC_INTERVAL * stream->idx);
                 }
 
+                stream->spib_addr = NULL;
                 if (fdoCtx->spbcap) {
                     stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB;
                     DbgPrint("SPIB offset: 0x%x\n", HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB);
                 }
 
                 PHYSICAL_ADDRESS maxAddr;
-                maxAddr.QuadPart = MAXULONG32;
+                maxAddr.QuadPart = MAXULONG64;
                 stream->bdl = (UINT32 *)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
-
-                stream->spib_addr = NULL;
             }
 
             SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,

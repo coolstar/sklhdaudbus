@@ -184,7 +184,7 @@ NTSTATUS ADSPPrepareDSP(
 	PHYSICAL_ADDRESS zeroAddr;
 	zeroAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
-	maxAddr.QuadPart = MAXULONG32;
+	maxAddr.QuadPart = MAXULONG64;
 	PMDL mdl = MmAllocatePagesForMdl(zeroAddr, maxAddr, zeroAddr, ByteSize);
 	if (!mdl) {
 		return STATUS_NO_MEMORY;
