@@ -17,6 +17,7 @@ typedef _Must_inspect_result_ NTSTATUS(*PGET_RENDER_STREAM)(_In_ PVOID _context,
 typedef _Must_inspect_result_ NTSTATUS(*PFREE_RENDER_STREAM)(_In_ PVOID _context, _In_ HANDLE Handle);
 typedef _Must_inspect_result_ NTSTATUS(*PDSP_PREPARE_STREAM)(_In_ PVOID _context, _In_ HANDLE Handle, _In_ unsigned int ByteSize, _In_ int frags, _Out_ PVOID* bdlBuf);
 typedef _Must_inspect_result_ NTSTATUS(*PDSP_CLEANUP_STREAM)(_In_ PVOID _context, _In_ HANDLE Handle);
+typedef _Must_inspect_result_ UINT32(*PDSP_STREAM_POSITION)(_In_ PVOID _context, _In_ HANDLE Handle);
 typedef void (*PDSP_START_STOP_STREAM)(_In_ PVOID _context, _In_ HANDLE Handle, BOOL startStop);
 typedef void (*PDSP_ENABLE_SPIB)(_In_ PVOID _context, _In_ HANDLE Handle, UINT32 value);
 typedef void (*PDSP_DISABLE_SPIB)(_In_ PVOID _context, _In_ HANDLE Handle);
@@ -47,6 +48,7 @@ typedef struct _ADSP_BUS_INTERFACE
     PDSP_PREPARE_STREAM           PrepareDSP;
     PDSP_CLEANUP_STREAM           CleanupDSP;
     PDSP_START_STOP_STREAM        TriggerDSP;
+    PDSP_STREAM_POSITION          StreamPosition;
 
     PDSP_ENABLE_SPIB              DSPEnableSPIB;
     PDSP_DISABLE_SPIB             DSPDisableSPIB;

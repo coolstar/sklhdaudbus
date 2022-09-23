@@ -292,6 +292,20 @@ void ADSPDisableSPIB(_In_ PVOID _context, _In_ HANDLE Handle) {
 	DbgPrint("Disabled SPIB\n");
 }
 
+UINT32 ADSPStreamPosition(_In_ PVOID _context, _In_ HANDLE Handle) {
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return 0;
+	}
+
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
+	if (stream->PdoContext != devData) {
+		return 0;
+	}
+
+	return *stream->posbuf;
+}
+
 ADSP_BUS_INTERFACE ADSP_BusInterface(PVOID Context) {
 	ADSP_BUS_INTERFACE busInterface;
 	RtlZeroMemory(&busInterface, sizeof(ADSP_BUS_INTERFACE));
@@ -313,6 +327,7 @@ ADSP_BUS_INTERFACE ADSP_BusInterface(PVOID Context) {
 	busInterface.PrepareDSP = ADSPPrepareDSP;
 	busInterface.CleanupDSP = ADSPCleanupDSP;
 	busInterface.TriggerDSP = ADSPStartStopDSP;
+	busInterface.StreamPosition = ADSPStreamPosition;
 
 	busInterface.DSPEnableSPIB = ADSPEnableSPIB;
 	busInterface.DSPDisableSPIB = ADSPDisableSPIB;
