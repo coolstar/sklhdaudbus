@@ -379,7 +379,7 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 	//Clear Interrupts
 	hda_int_clear(fdoCtx);
 
-	//hdac_bus_init_cmd_io(fdoCtx);
+	hdac_bus_init_cmd_io(fdoCtx);
 
 	//Enable interrupts
 	hda_update32(fdoCtx, INTCTL, HDA_INT_CTRL_EN | HDA_INT_GLOBAL_EN,
@@ -409,7 +409,7 @@ void hdac_bus_stop(PFDO_CONTEXT fdoCtx) {
 	hda_int_clear(fdoCtx);
 
 	/* disable CORB/RIRB */
-	//hdac_bus_stop_cmd_io(fdoCtx);
+	hdac_bus_stop_cmd_io(fdoCtx);
 
 	/* disable position buffer */
 	if (fdoCtx->posbuf) {
@@ -447,7 +447,6 @@ BOOLEAN hda_interrupt(
 		}
 	}
 
-#if 0
 	BOOLEAN active, handled = FALSE;
 	int repeat = 0; //Avoid endless loop
 	do {
@@ -480,8 +479,6 @@ BOOLEAN hda_interrupt(
 	} while (active && ++repeat < 10);
 
 	return handled;
-#endif
-	return FALSE;
 }
 
 NTSTATUS hdac_bus_exec_verb_unlocked(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32 cmd, UINT32* res) {

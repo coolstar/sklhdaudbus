@@ -343,12 +343,12 @@ Fdo_EvtDevicePrepareHardware(
         return STATUS_NO_MEMORY;
     }
 
-    /*fdoCtx->rb = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
+    fdoCtx->rb = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
     RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
 
     if (!fdoCtx->rb) {
         return STATUS_NO_MEMORY;
-    }*/
+    }
 
     //Init Streams
     {

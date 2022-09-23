@@ -117,7 +117,55 @@ NTSTATUS ADSPGetRenderStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFo
 	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
-NTSTATUS ADSPFreeRenderStream(
+NTSTATUS ADSPGetCaptureStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFormat, PHANDLE Handle, _Out_ UINT8* streamTag) {
+	if (!_context)
+		return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PFDO_CONTEXT fdoContext = devData->FdoContext;
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+	for (int i = 0; i < fdoContext->captureStreams; i++) {
+		int tag = fdoContext->captureIndexOff + i;
+		PHDAC_STREAM stream = &fdoContext->streams[tag];
+		if (stream->PdoContext != NULL) {
+			continue;
+		}
+
+		stream->stripe = FALSE;
+		stream->PdoContext = devData;
+		stream->prepared = FALSE;
+		stream->running = FALSE;
+		stream->streamFormat = StreamFormat;
+
+		int mask = HDA_PPCTL_PROCEN(stream->idx);
+		UINT32 val = 0;
+		val = read16(fdoContext->ppcap + HDA_REG_PP_PPCTL) & mask;
+
+		if (!val) {
+			DbgPrint("Decoupled stream\n");
+			hdac_update32(fdoContext->ppcap, HDA_REG_PP_PPCTL, mask, mask);
+		}
+		DbgPrint("Stream index: %d, tag: %d\n", stream->idx, stream->streamTag);
+
+		if (Handle)
+			*Handle = (HANDLE)stream;
+		if (streamTag)
+			*streamTag = stream->streamTag;
+
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+		return STATUS_SUCCESS;
+	}
+
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	return STATUS_INSUFFICIENT_RESOURCES;
+}
+
+NTSTATUS ADSPFreeStream(
 	_In_ PVOID _context,
 	_In_ HANDLE Handle
 ) {
@@ -323,7 +371,8 @@ ADSP_BUS_INTERFACE ADSP_BusInterface(PVOID Context) {
 	busInterface.UnregisterInterrupt = ADSPUnregisterInterrupt;
 
 	busInterface.GetRenderStream = ADSPGetRenderStream;
-	busInterface.FreeRenderStream = ADSPFreeRenderStream;
+	busInterface.GetCaptureStream = ADSPGetCaptureStream;
+	busInterface.FreeStream = ADSPFreeStream;
 	busInterface.PrepareDSP = ADSPPrepareDSP;
 	busInterface.CleanupDSP = ADSPCleanupDSP;
 	busInterface.TriggerDSP = ADSPStartStopDSP;
