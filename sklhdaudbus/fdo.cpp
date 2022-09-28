@@ -1,4 +1,5 @@
 #include "driver.h"
+#include "nhlt.h"
 
 EVT_WDF_DEVICE_PREPARE_HARDWARE Fdo_EvtDevicePrepareHardware;
 EVT_WDF_DEVICE_RELEASE_HARDWARE Fdo_EvtDeviceReleaseHardware;
@@ -406,6 +407,26 @@ Fdo_EvtDevicePrepareHardware(
 
     WdfWaitLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &fdoCtx->cmdLock);
 
+    fdoCtx->nhlt = NULL;
+    fdoCtx->nhltSz = 0;
+    {
+        NTSTATUS status2 = NHLTCheckSupported(Device);
+        if (NT_SUCCESS(status2)) {
+            UINT64 nhltAddr;
+            UINT64 nhltSz;
+
+            status2 = NHLTQueryTableAddress(Device, &nhltAddr, &nhltSz);
+
+            if (NT_SUCCESS(status2)) {
+                PHYSICAL_ADDRESS nhltBaseAddr;
+                nhltBaseAddr.QuadPart = nhltAddr;
+
+                fdoCtx->nhlt = MmMapIoSpace(nhltBaseAddr, nhltSz, MmCached);
+                fdoCtx->nhltSz = nhltSz;
+            }
+        }
+    }
+
     status = STATUS_SUCCESS;
 
     return status;
@@ -425,6 +446,9 @@ Fdo_EvtDeviceReleaseHardware(
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
+
+    if (fdoCtx->nhlt)
+        MmUnmapIoSpace(fdoCtx->nhlt, fdoCtx->nhltSz);
 
     if (fdoCtx->unsolWork) {
         WdfWorkItemFlush(fdoCtx->unsolWork);

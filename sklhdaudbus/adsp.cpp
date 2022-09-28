@@ -2,7 +2,7 @@
 #define ADSP_DECL 1
 #include "adsp.h"
 
-NTSTATUS ADSPGetResources(_In_ PVOID _context, _PCI_BAR* hdaBar, _PCI_BAR* adspBar, PVOID *ppcap, BUS_INTERFACE_STANDARD* pciConfig) {
+NTSTATUS ADSPGetResources(_In_ PVOID _context, _PCI_BAR* hdaBar, _PCI_BAR* adspBar, PVOID *ppcap, PNHLT_INFO nhltInfo, BUS_INTERFACE_STANDARD* pciConfig) {
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
 
@@ -27,6 +27,11 @@ NTSTATUS ADSPGetResources(_In_ PVOID _context, _PCI_BAR* hdaBar, _PCI_BAR* adspB
 
 	if (ppcap) {
 		*ppcap = devData->FdoContext->ppcap;
+	}
+
+	if (nhltInfo) {
+		nhltInfo->nhlt = devData->FdoContext->nhlt;
+		nhltInfo->nhltSz = devData->FdoContext->nhltSz;
 	}
 
 	if (pciConfig) {

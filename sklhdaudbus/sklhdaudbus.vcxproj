@@ -151,6 +151,7 @@
     <ClInclude Include="hdac_stream.h" />
     <ClInclude Include="hda_registers.h" />
     <ClInclude Include="hda_verbs.h" />
+    <ClInclude Include="nhlt.h" />
     <ClInclude Include="regfuncs.h" />
     <ClInclude Include="trace.h" />
   </ItemGroup>
@@ -161,6 +162,7 @@
     <ClCompile Include="hdac_controller.cpp" />
     <ClCompile Include="hdac_stream.cpp" />
     <ClCompile Include="hdaudio.cpp" />
+    <ClCompile Include="nhlt.cpp" />
     <ClCompile Include="sklhdaudbus.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

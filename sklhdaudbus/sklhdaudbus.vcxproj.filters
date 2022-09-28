@@ -35,6 +35,9 @@
     <ClCompile Include="adsp.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="nhlt.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h">
@@ -68,6 +71,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="adsp.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="nhlt.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

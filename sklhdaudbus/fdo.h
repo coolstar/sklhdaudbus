@@ -89,6 +89,8 @@ typedef struct _FDO_CONTEXT
 
     PADSP_INTERRUPT_CALLBACK dspInterruptCallback;
     PVOID dspInterruptContext;
+    PVOID nhlt;
+    UINT64 nhltSz;
 
     //unsolicited events
     UINT32 unsol_queue[HDA_UNSOL_QUEUE_SIZE * 2];
