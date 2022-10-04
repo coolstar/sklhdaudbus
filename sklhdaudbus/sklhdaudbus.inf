@@ -45,7 +45,8 @@ sklhdaudbus.sys  = 1,,
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_15AD&DEV_1977&CC_0403 ;Test in VMWare
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_9D70&CC_0401 ;Intel Skylake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_9D71&CC_0401 ;Intel Kaby Lake
-%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_5A98&CC_0401 ;Intel Kaby Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_5A98&CC_0401 ;Intel Apollo Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_3198&CC_0401 ;Intel Gemini Lake
 
 [SklHDAudBus_Device.NT]
 CopyFiles=Drivers_Dir
