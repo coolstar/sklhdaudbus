@@ -104,10 +104,8 @@ NTSTATUS ADSPGetRenderStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFo
 		val = read16(fdoContext->ppcap + HDA_REG_PP_PPCTL) & mask;
 
 		if (!val) {
-			DbgPrint("Decoupled stream\n");
 			hdac_update32(fdoContext->ppcap, HDA_REG_PP_PPCTL, mask, mask);
 		}
-		DbgPrint("Stream index: %d, tag: %d\n", stream->idx, stream->streamTag);
 
 		if (Handle)
 			*Handle = (HANDLE)stream;
@@ -152,10 +150,8 @@ NTSTATUS ADSPGetCaptureStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamF
 		val = read16(fdoContext->ppcap + HDA_REG_PP_PPCTL) & mask;
 
 		if (!val) {
-			DbgPrint("Decoupled stream\n");
 			hdac_update32(fdoContext->ppcap, HDA_REG_PP_PPCTL, mask, mask);
 		}
-		DbgPrint("Stream index: %d, tag: %d\n", stream->idx, stream->streamTag);
 
 		if (Handle)
 			*Handle = (HANDLE)stream;
@@ -199,7 +195,6 @@ NTSTATUS ADSPFreeStream(
 	val = read16(fdoContext->ppcap + HDA_REG_PP_PPCTL) & mask;
 
 	if (val) {
-		DbgPrint("Re-coupled stream\n");
 		hdac_update32(fdoContext->ppcap, HDA_REG_PP_PPCTL, mask, 0);
 	}
 
@@ -291,8 +286,6 @@ void ADSPStartStopDSP(_In_ PVOID _context, _In_ HANDLE Handle, BOOL startStop) {
 		return;
 	}
 
-	DbgPrint("Toggling DSP load stream: %d\n", startStop);
-
 	if (startStop)
 		hdac_stream_start(stream);
 	else
@@ -318,8 +311,6 @@ void ADSPEnableSPIB(_In_ PVOID _context, _In_ HANDLE Handle, UINT32 value) {
 	hdac_update32(devData->FdoContext->spbcap, HDA_REG_SPB_SPBFCCTL, mask, mask);
 
 	write32(stream->spib_addr, value);
-
-	DbgPrint("Enabled SPIB: %d\n", value);
 }
 
 void ADSPDisableSPIB(_In_ PVOID _context, _In_ HANDLE Handle) {
@@ -341,8 +332,6 @@ void ADSPDisableSPIB(_In_ PVOID _context, _In_ HANDLE Handle) {
 	hdac_update32(devData->FdoContext->spbcap, HDA_REG_SPB_SPBFCCTL, mask, 0);
 
 	write32(stream->spib_addr, 0);
-
-	DbgPrint("Disabled SPIB\n");
 }
 
 UINT32 ADSPStreamPosition(_In_ PVOID _context, _In_ HANDLE Handle) {

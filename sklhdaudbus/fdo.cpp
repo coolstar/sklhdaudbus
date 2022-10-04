@@ -392,7 +392,6 @@ Fdo_EvtDevicePrepareHardware(
                 stream->spib_addr = NULL;
                 if (fdoCtx->spbcap) {
                     stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB;
-                    DbgPrint("SPIB offset: 0x%x\n", HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB);
                 }
 
                 PHYSICAL_ADDRESS maxAddr;

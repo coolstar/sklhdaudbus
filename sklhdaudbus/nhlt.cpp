@@ -38,7 +38,7 @@ NHLTQuery(
 		&inputBufferMemory,
 		(PVOID*)&inputBuffer);
 	if (!NT_SUCCESS(status)) {
-		DbgPrint("Failed to create input buffer\n");
+		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Failed to create input buffer\n");
 		goto end;
 	}
 	RtlZeroMemory(inputBuffer, inputBufferSize);
@@ -50,7 +50,7 @@ NHLTQuery(
 		"_DSM"
 	);
 	if (!NT_SUCCESS(status)) {
-		DbgPrint("Failed to write method name\n");
+		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Failed to write method name\n");
 		goto end;
 	}
 
@@ -91,11 +91,10 @@ NHLTQuery(
 		&bytesReturned);
 
 	if (status == STATUS_BUFFER_OVERFLOW) {
-		DbgPrint("Overflowed buffer on first ioctl... retrying\n");
 		status = STATUS_SUCCESS;
 	}
 	else if (!NT_SUCCESS(status)) {
-		DbgPrint("Failed first ioctl\n");
+		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Failed first ioctl\n");
 		goto end;
 	}
 
@@ -106,7 +105,7 @@ NHLTQuery(
 		&outputBufferMemory,
 		(PVOID*)NULL);
 	if (!NT_SUCCESS(status)) {
-		DbgPrint("Failed to create output buffer\n");
+		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Failed to create output buffer\n");
 		goto end;
 	}
 
@@ -122,7 +121,7 @@ NHLTQuery(
 		&bytesReturned);
 
 	if (!NT_SUCCESS(status)) {
-		DbgPrint("Failed to do 2nd ioctl\n");
+		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Failed to do 2nd ioctl\n");
 		goto end;
 	}
 

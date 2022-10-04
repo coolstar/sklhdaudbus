@@ -288,7 +288,7 @@ void hdac_bus_enter_link_reset(PFDO_CONTEXT fdoCtx) {
 		KeQuerySystemTimePrecise(&CurrentTime);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			DbgPrint("Enter link reset timeout\n");
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Enter link reset timeout\n");
 			return;
 		}
 		udelay(500);
@@ -308,7 +308,7 @@ void hdac_bus_exit_link_reset(PFDO_CONTEXT fdoCtx) {
 		KeQuerySystemTimePrecise(&CurrentTime);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			DbgPrint("Exit link reset timeout\n");
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Exit link reset timeout\n");
 			return;
 		}
 		udelay(500);
@@ -387,7 +387,6 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 
 	//Program the position buffer
 	PHYSICAL_ADDRESS posbufAddr = MmGetPhysicalAddress(fdoCtx->posbuf);
-	DbgPrint("Use position bufs: %x %x\n", posbufAddr.LowPart, posbufAddr.HighPart);
 	hda_write32(fdoCtx, DPLBASE, posbufAddr.LowPart);
 	hda_write32(fdoCtx, DPUBASE, posbufAddr.HighPart);
 

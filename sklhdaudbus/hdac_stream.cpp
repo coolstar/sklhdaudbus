@@ -1,7 +1,7 @@
 #include "driver.h"
 
 void hdac_stream_start(PHDAC_STREAM stream) {
-	DbgPrint("Wallclk: %d\n", hda_read32(stream->FdoContext, WALLCLK));
+	hda_read32(stream->FdoContext, WALLCLK);
 
 	/* enable SIE */
 	hda_update32(stream->FdoContext, INTCTL, 1 << stream->idx, 1 << stream->idx);
@@ -67,10 +67,49 @@ void hdac_stream_reset(PHDAC_STREAM stream) {
 }
 
 UINT hdac_format(PHDAC_STREAM stream) {
-	UINT format = HDA_RATE(48, 1, 1);
+	UINT format = 0;
+
+	switch (stream->streamFormat.SampleRate) {
+	case 8000:
+		format = HDA_RATE(48, 1, 6);
+		break;
+	case 9600:
+		format = HDA_RATE(48, 1, 5);
+		break;
+	case 11025:
+		format = HDA_RATE(44, 1, 4);
+		break;
+	case 16000:
+		format = HDA_RATE(48, 1, 3);
+		break;
+	case 22050:
+		format = HDA_RATE(44, 1, 2);
+		break;
+	case 32000:
+		format = HDA_RATE(48, 2, 3);
+		break;
+	case 44100:
+		format = HDA_RATE(44, 1, 1);
+		break;
+	case 48000:
+		format = HDA_RATE(48, 1, 1);
+		break;
+	case 88200:
+		format = HDA_RATE(44, 2, 1);
+		break;
+	case 96000:
+		format = HDA_RATE(48, 2, 1);
+		break;
+	case 176400:
+		format = HDA_RATE(44, 4, 1);
+		break;
+	case 192000:
+		format = HDA_RATE(48, 4, 1);
+		break;
+	}
+
 	{
 		UINT channels = stream->streamFormat.NumberOfChannels;
-		DbgPrint("Channels: %d\n", channels);
 		if (channels == 0 || channels > 8)
 			return 0;
 		format |= channels - 1;
@@ -105,7 +144,6 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	val = stream_read32(stream, SD_CTL);
 	val = (val & ~SD_CTL_STREAM_TAG_MASK) |
 		(stream->streamTag << SD_CTL_STREAM_TAG_SHIFT);
-	DbgPrint("ctl (tag %d): 0x%x\n", stream->streamTag, val);
 	stream_write32(stream, SD_CTL, val);
 
 	/* program the length of samples in cyclic buffer */
@@ -114,7 +152,6 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	/* program the stream format */
 	/* this value needs to be the same as the one programmed */
 	UINT format = hdac_format(stream);
-	DbgPrint("sdfmt: 0x%x\n", format);
 	stream_write16(stream, SD_FORMAT, format);
 
 	/* program the stream LVI (last valid index) of the BDL */
@@ -126,7 +163,6 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	stream_write32(stream, SD_BDLPL, bdlAddr.LowPart);
 	/* upper BDL address */
 	stream_write32(stream, SD_BDLPU, bdlAddr.HighPart);
-	DbgPrint("BDL: 0x%x 0x%x\n", bdlAddr.LowPart, bdlAddr.HighPart);
 
 	//Enable position buffer
 	if (!(hda_read32(stream->FdoContext, DPLBASE) & HDA_DPLBASE_ENABLE)){
@@ -139,5 +175,4 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 
 	stream->fifoSize = 0;
 	stream->fifoSize = stream_read16(stream, SD_FIFOSIZE) + 1;
-	DbgPrint("Fifo Size: 0x%lx\n", stream->fifoSize);
 }
