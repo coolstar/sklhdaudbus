@@ -329,7 +329,7 @@ Fdo_EvtDevicePrepareHardware(
     fdoCtx->playbackIndexOff = fdoCtx->captureStreams;
     fdoCtx->numStreams = fdoCtx->captureStreams + fdoCtx->playbackStreams;
 
-    fdoCtx->streams = (PHDAC_STREAM)ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
+    fdoCtx->streams = (PHDAC_STREAM)ExAllocatePoolZero(NonPagedPool, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
     if (!fdoCtx->streams) {
         return STATUS_NO_MEMORY;
     }

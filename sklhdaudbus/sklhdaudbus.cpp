@@ -33,6 +33,12 @@ __in PUNICODE_STRING RegistryPath
 	SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
 		"Driver Entry\n");
 
+	//
+	//  Default to NonPagedPoolNx for non paged pool allocations where supported.
+	//
+
+	ExInitializeDriverRuntime(DrvRtPoolNxOptIn);
+
 	WDF_DRIVER_CONFIG_INIT(&config, SklHdAudBusEvtDeviceAdd);
 
 	status = WdfDriverCreate(DriverObject,
