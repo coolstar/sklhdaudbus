@@ -47,6 +47,10 @@ sklhdaudbus.sys  = 1,,
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_9D71&CC_0401 ;Intel Kaby Lake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_5A98&CC_0401 ;Intel Apollo Lake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_3198&CC_0401 ;Intel Gemini Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_02C8&CC_0401 ;Intel Comet Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_4DC8&CC_0401 ;Intel Jasper Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_A0C8&CC_0401 ;Intel Tiger Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51C8&CC_0401 ;Intel Alder Lake
 
 [SklHDAudBus_Device.NT]
 CopyFiles=Drivers_Dir
