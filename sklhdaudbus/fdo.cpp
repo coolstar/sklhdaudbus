@@ -95,6 +95,14 @@ Fdo_Create(
         goto Exit;
     }
 
+    {
+        WDF_DEVICE_STATE deviceState;
+        WDF_DEVICE_STATE_INIT(&deviceState);
+
+        deviceState.NotDisableable = WdfFalse;
+        WdfDeviceSetDeviceState(wdfDevice, &deviceState);
+    }
+
     fdoCtx = Fdo_GetContext(wdfDevice);
     fdoCtx->WdfDevice = wdfDevice;
 
