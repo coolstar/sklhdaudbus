@@ -428,8 +428,10 @@ Fdo_EvtDevicePrepareHardware(
                 PHYSICAL_ADDRESS nhltBaseAddr;
                 nhltBaseAddr.QuadPart = nhltAddr;
 
-                fdoCtx->nhlt = MmMapIoSpace(nhltBaseAddr, nhltSz, MmCached);
-                fdoCtx->nhltSz = nhltSz;
+                if (nhltAddr != 0 && nhltSz != 0) {
+                    fdoCtx->nhlt = MmMapIoSpace(nhltBaseAddr, nhltSz, MmCached);
+                    fdoCtx->nhltSz = nhltSz;
+                }
             }
         }
     }
