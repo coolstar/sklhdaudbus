@@ -233,7 +233,9 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->unsol_queue[wp] = res;
 			fdoCtx->unsol_queue[wp + 1] = res_ex;
 
-			WdfWorkItemEnqueue(fdoCtx->unsolWork);
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
+				"Attempting to queue workitem for %d\n", addr);
+			//WdfWorkItemEnqueue(fdoCtx->unsolWork);
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
 			fdoCtx->rirb.res[addr] = res;
