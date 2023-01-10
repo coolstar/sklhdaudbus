@@ -326,7 +326,20 @@ NTSTATUS HDA_GetDeviceInformation(
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
 
-	return STATUS_UNSUCCESSFUL;
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	if (DeviceInformation) {
+		DeviceInformation->Size = sizeof(HDAUDIO_DEVICE_INFORMATION);
+		DeviceInformation->DeviceVersion = devData->FdoContext->venId;
+		DeviceInformation->DriverVersion = devData->FdoContext->devId;
+		DeviceInformation->CodecsDetected = devData->FdoContext->numCodecs;
+		DeviceInformation->IsStripingSupported = devData->FdoContext->streams[0]->stripe;
+	}
+
+	return STATUS_SUCCESS;
 }
 
 void HDA_GetResourceInformation(
