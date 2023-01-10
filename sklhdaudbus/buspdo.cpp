@@ -190,7 +190,7 @@ Bus_CreatePdo(
         //
         // Provide DeviceID, HardwareIDs, CompatibleIDs and InstanceId
         //
-        status = RtlUnicodeStringPrintf(&deviceId, L"CSAUDIO\\ADSP&CTLR_VEN_%02X&CTLR_DEV_%02X",
+        status = RtlUnicodeStringPrintf(&deviceId, L"CSAUDIO\\ADSP&CTLR_VEN_%04X&CTLR_DEV_%04X",
              Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId);
         if (!NT_SUCCESS(status)) {
             return status;
@@ -209,7 +209,7 @@ Bus_CreatePdo(
             return status;
         }
 
-        status = RtlUnicodeStringPrintf(&compatId, L"CSAUDIO\\ADSP&CTLR_VEN_%02X&CTLR_DEV_%02X",
+        status = RtlUnicodeStringPrintf(&compatId, L"CSAUDIO\\ADSP&CTLR_VEN_%04X&CTLR_DEV_%04X",
             Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId);
         if (!NT_SUCCESS(status)) {
             return status;
