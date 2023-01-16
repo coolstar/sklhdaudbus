@@ -21,10 +21,6 @@ NTSTATUS ADSPGetResources(_In_ PVOID _context, _PCI_BAR* hdaBar, _PCI_BAR* adspB
 		*adspBar = devData->FdoContext->m_BAR4;
 	}
 
-	if (adspBar) {
-		*adspBar = devData->FdoContext->m_BAR4;
-	}
-
 	if (ppcap) {
 		*ppcap = devData->FdoContext->ppcap;
 	}
