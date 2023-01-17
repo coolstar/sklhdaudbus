@@ -37,13 +37,13 @@ HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context);
 
 static void mdelay(LONG msec) {
 	LARGE_INTEGER Interval;
-	Interval.QuadPart = -10 * 1000 * msec;
+	Interval.QuadPart = -10 * 1000 * (LONGLONG)msec;
 	KeDelayExecutionThread(KernelMode, FALSE, &Interval);
 }
 
 static void udelay(LONG usec) {
 	LARGE_INTEGER Interval;
-	Interval.QuadPart = -10 * usec;
+	Interval.QuadPart = -10 * (LONGLONG)usec;
 	KeDelayExecutionThread(KernelMode, FALSE, &Interval);
 }
 

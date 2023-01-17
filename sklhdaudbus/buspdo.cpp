@@ -35,8 +35,6 @@ Return Value:
 --*/
 {
     PPDO_IDENTIFICATION_DESCRIPTION src, dst;
-    size_t safeMultResult;
-    NTSTATUS status;
 
     UNREFERENCED_PARAMETER(DeviceList);
 
@@ -192,6 +190,11 @@ Bus_CreatePdo(
         //
         status = RtlUnicodeStringPrintf(&deviceId, L"CSAUDIO\\ADSP&CTLR_VEN_%04X&CTLR_DEV_%04X",
              Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        status = WdfPdoInitAssignInstanceID(DeviceInit, &deviceId);
         if (!NT_SUCCESS(status)) {
             return status;
         }

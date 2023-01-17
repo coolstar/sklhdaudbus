@@ -1,5 +1,6 @@
 #include "driver.h"
 #include "nhlt.h"
+#include "sof-tplg.h"
 
 EVT_WDF_DEVICE_PREPARE_HARDWARE Fdo_EvtDevicePrepareHardware;
 EVT_WDF_DEVICE_RELEASE_HARDWARE Fdo_EvtDeviceReleaseHardware;
@@ -416,7 +417,8 @@ Fdo_EvtDevicePrepareHardware(
 
     fdoCtx->nhlt = NULL;
     fdoCtx->nhltSz = 0;
-    {
+
+    { //Check NHLT for Intel SST
         NTSTATUS status2 = NHLTCheckSupported(Device);
         if (NT_SUCCESS(status2)) {
             UINT64 nhltAddr;
@@ -433,6 +435,19 @@ Fdo_EvtDevicePrepareHardware(
                     fdoCtx->nhltSz = nhltSz;
                 }
             }
+        }
+    }
+
+    fdoCtx->sofTplg = NULL;
+    fdoCtx->sofTplgSz = 0;
+
+    { //Check topology for Intel SOF
+        SOF_TPLG sofTplg = { 0 };
+        NTSTATUS status2 = GetSOFTplg(Device, &sofTplg);
+        if (NT_SUCCESS(status2) && sofTplg.magic == SOFTPLG_MAGIC) {
+            fdoCtx->sofTplg = ExAllocatePoolWithTag(NonPagedPool, sofTplg.length, SKLHDAUDBUS_POOL_TAG);
+            RtlCopyMemory(fdoCtx->sofTplg, &sofTplg, sofTplg.length);
+            fdoCtx->sofTplgSz = sofTplg.length;
         }
     }
 
@@ -458,6 +473,9 @@ Fdo_EvtDeviceReleaseHardware(
 
     if (fdoCtx->nhlt)
         MmUnmapIoSpace(fdoCtx->nhlt, fdoCtx->nhltSz);
+
+    if (fdoCtx->sofTplg)
+        ExFreePoolWithTag(fdoCtx->sofTplg, SKLHDAUDBUS_POOL_TAG);
 
     if (fdoCtx->unsolWork) {
         WdfWorkItemFlush(fdoCtx->unsolWork);
@@ -555,7 +573,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
     _In_ WDFDEVICE Device
 )
 {
-    NTSTATUS status;
+    NTSTATUS status = STATUS_SUCCESS;
     PFDO_CONTEXT fdoCtx;
 
     fdoCtx = Fdo_GetContext(Device);

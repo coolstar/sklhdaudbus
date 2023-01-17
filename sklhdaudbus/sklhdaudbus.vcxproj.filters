@@ -38,6 +38,9 @@
     <ClCompile Include="nhlt.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="sof-tplg.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h">
@@ -75,6 +78,9 @@
     </ClInclude>
     <ClInclude Include="nhlt.h">
       <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="sof-tplg.h">
+      <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

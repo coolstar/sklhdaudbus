@@ -6,8 +6,6 @@ NTSTATUS ADSPGetResources(_In_ PVOID _context, _PCI_BAR* hdaBar, _PCI_BAR* adspB
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
 
-	NTSTATUS status = STATUS_SUCCESS;
-
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -26,8 +24,14 @@ NTSTATUS ADSPGetResources(_In_ PVOID _context, _PCI_BAR* hdaBar, _PCI_BAR* adspB
 	}
 
 	if (nhltInfo) {
-		nhltInfo->nhlt = devData->FdoContext->nhlt;
-		nhltInfo->nhltSz = devData->FdoContext->nhltSz;
+		if (devData->FdoContext->nhlt) {
+			nhltInfo->nhlt = devData->FdoContext->nhlt;
+			nhltInfo->nhltSz = devData->FdoContext->nhltSz;
+		}
+		else if (devData->FdoContext->sofTplg) {
+			nhltInfo->nhlt = devData->FdoContext->sofTplg;
+			nhltInfo->nhltSz = devData->FdoContext->sofTplgSz;
+		}
 	}
 
 	if (pciConfig) {
@@ -42,8 +46,6 @@ NTSTATUS ADSPRegisterInterrupt(_In_ PVOID _context, _In_ PADSP_INTERRUPT_CALLBAC
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
 
-	NTSTATUS status = STATUS_SUCCESS;
-
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -57,8 +59,6 @@ NTSTATUS ADSPRegisterInterrupt(_In_ PVOID _context, _In_ PADSP_INTERRUPT_CALLBAC
 NTSTATUS ADSPUnregisterInterrupt(_In_ PVOID _context) {
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
-
-	NTSTATUS status = STATUS_SUCCESS;
 
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
