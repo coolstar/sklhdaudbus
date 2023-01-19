@@ -174,7 +174,7 @@ NTSTATUS ADSPFreeStream(
 	}
 
 	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
-	if (stream->PdoContext != devData) {
+	if (!stream || stream->PdoContext != devData) {
 		return STATUS_INVALID_HANDLE;
 	}
 
@@ -213,7 +213,7 @@ NTSTATUS ADSPPrepareDSP(
 	}
 
 	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
-	if (stream->PdoContext != devData) {
+	if (!stream || stream->PdoContext != devData) {
 		return STATUS_INVALID_HANDLE;
 	}
 
@@ -256,7 +256,7 @@ NTSTATUS ADSPCleanupDSP(_In_ PVOID _context, _In_ HANDLE Handle) {
 	}
 
 	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
-	if (stream->PdoContext != devData) {
+	if (!stream || stream->PdoContext != devData) {
 		return STATUS_INVALID_HANDLE;
 	}
 
@@ -278,7 +278,7 @@ void ADSPStartStopDSP(_In_ PVOID _context, _In_ HANDLE Handle, BOOL startStop) {
 	}
 
 	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
-	if (stream->PdoContext != devData) {
+	if (!stream || stream->PdoContext != devData) {
 		return;
 	}
 
@@ -295,7 +295,7 @@ void ADSPEnableSPIB(_In_ PVOID _context, _In_ HANDLE Handle, UINT32 value) {
 	}
 
 	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
-	if (stream->PdoContext != devData) {
+	if (!stream || stream->PdoContext != devData) {
 		return;
 	}
 
@@ -316,7 +316,7 @@ void ADSPDisableSPIB(_In_ PVOID _context, _In_ HANDLE Handle) {
 	}
 
 	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
-	if (stream->PdoContext != devData) {
+	if (!stream || stream->PdoContext != devData) {
 		return;
 	}
 
@@ -337,7 +337,7 @@ UINT32 ADSPStreamPosition(_In_ PVOID _context, _In_ HANDLE Handle) {
 	}
 
 	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
-	if (stream->PdoContext != devData) {
+	if (!stream || stream->PdoContext != devData) {
 		return 0;
 	}
 
