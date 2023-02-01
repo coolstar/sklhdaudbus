@@ -51,6 +51,7 @@ sklhdaudbus.sys  = 1,,
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_4DC8&CC_0401 ;Intel Jasper Lake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_A0C8&CC_0401 ;Intel Tiger Lake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51C8&CC_0401 ;Intel Alder Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_54C8&CC_0401 ;Intel Alder Lake-N
 
 [SklHDAudBus_Device.NT]
 CopyFiles=Drivers_Dir
