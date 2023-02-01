@@ -50,7 +50,9 @@ sklhdaudbus.sys  = 1,,
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_02C8&CC_0401 ;Intel Comet Lake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_4DC8&CC_0401 ;Intel Jasper Lake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_A0C8&CC_0401 ;Intel Tiger Lake
-%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51C8&CC_0401 ;Intel Alder Lake
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51C8&CC_0401 ;Intel Alder Lake-P
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CC&CC_0401 ;Intel Alder Lake-M
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CD&CC_0401 ;Intel Alder Lake-P
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_54C8&CC_0401 ;Intel Alder Lake-N
 
 [SklHDAudBus_Device.NT]
