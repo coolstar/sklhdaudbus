@@ -54,6 +54,9 @@ sklhdaudbus.sys  = 1,,
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CC&CC_0401 ;Intel Alder Lake-M
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CD&CC_0401 ;Intel Alder Lake-P
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_54C8&CC_0401 ;Intel Alder Lake-N
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CA&CC_0401 ;Intel Raptor Lake-P
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CB&CC_0401 ;Intel Raptor Lake-P
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CE&CC_0401 ;Intel Raptor Lake-M
 
 [SklHDAudBus_Device.NT]
 CopyFiles=Drivers_Dir
