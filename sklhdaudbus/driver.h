@@ -27,6 +27,7 @@
 #define SKLHDAUDBUS_POOL_TAG 'SADH'
 
 #define VEN_INTEL 0x8086
+#define VEN_VMWARE 0x15AD
 
 #include "regfuncs.h"
 

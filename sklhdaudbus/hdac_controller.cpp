@@ -4,7 +4,7 @@ static void hda_clear_corbrp(PFDO_CONTEXT fdoCtx) {
 	//Clear the CORB read pointer
 	int timeout;
 
-	if (fdoCtx->venId != 0x15AD) {
+	if (fdoCtx->venId != VEN_VMWARE) {
 		for (timeout = 1000; timeout > 0; timeout--) {
 			if (hda_read16(fdoCtx, CORBRP) & HDA_CORBRP_RST)
 				break;
