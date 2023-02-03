@@ -272,18 +272,6 @@ Fdo_EvtDevicePrepareHardware(
             }
 
             switch ((cur_cap & HDA_CAP_HDR_ID_MASK) >> HDA_CAP_HDR_ID_OFF) {
-            case HDA_ML_CAP_ID:
-                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-                    "Found ML capability\n");
-                fdoCtx->mlcap = fdoCtx->m_BAR0.Base.baseptr + offset;
-                break;
-
-            case HDA_GTS_CAP_ID:
-                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-                    "Found GTS capability offset=%x\n", offset);
-                fdoCtx->gtscap = fdoCtx->m_BAR0.Base.baseptr + offset;
-                break;
-
             case HDA_PP_CAP_ID:
                 /* PP capability found, the Audio DSP is present */
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
@@ -297,14 +285,6 @@ Fdo_EvtDevicePrepareHardware(
                     "Found SPB capability\n");
                 fdoCtx->spbcap = fdoCtx->m_BAR0.Base.baseptr + offset;
                 break;
-
-            case HDA_DRSM_CAP_ID:
-                /* DMA resume  capability found, handler function */
-                SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-                    "Found DRSM capability\n");
-                fdoCtx->drsmcap = fdoCtx->m_BAR0.Base.baseptr + offset;
-                break;
-
             default:
                 SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Unknown capability %d\n", cur_cap);
                 cur_cap = 0;
