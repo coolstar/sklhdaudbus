@@ -512,16 +512,17 @@ Bus_CreatePdo(
         status = WdfDeviceAddQueryInterface(hChild, &qiConfig);
     }
     else {
-        //TODO: Add HD Audio Interfaces
-
-        /*HDAUDIO_BUS_INTERFACE busInterface = HDA_BusInterface(pdoData);
+        HDAUDIO_BUS_INTERFACE busInterface = HDA_BusInterface(pdoData);
 
         WDF_QUERY_INTERFACE_CONFIG_INIT(&qiConfig,
             (PINTERFACE)&busInterface,
             &GUID_HDAUDIO_BUS_INTERFACE,
             NULL);
 
-        status = WdfDeviceAddQueryInterface(hChild, &qiConfig);*/
+        status = WdfDeviceAddQueryInterface(hChild, &qiConfig);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
 
         HDAUDIO_BUS_INTERFACE_V2 busInterface2 = HDA_BusInterfaceV2(pdoData);
         WDF_QUERY_INTERFACE_CONFIG_INIT(&qiConfig,
@@ -529,6 +530,19 @@ Bus_CreatePdo(
             &GUID_HDAUDIO_BUS_INTERFACE_V2,
             NULL);
         status = WdfDeviceAddQueryInterface(hChild, &qiConfig);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
+
+        HDAUDIO_BUS_INTERFACE_V3 busInterface3 = HDA_BusInterfaceV3(pdoData);
+        WDF_QUERY_INTERFACE_CONFIG_INIT(&qiConfig,
+            (PINTERFACE)&busInterface3,
+            &GUID_HDAUDIO_BUS_INTERFACE_V3,
+            NULL);
+        status = WdfDeviceAddQueryInterface(hChild, &qiConfig);
+        if (!NT_SUCCESS(status)) {
+            return status;
+        }
     }
 
     return status;

@@ -19,6 +19,14 @@ typedef struct _PCI_BAR {
 
 struct _FDO_CONTEXT;
 struct _PDO_DEVICE_DATA;
+
+typedef struct _HDAC_STREAM_CALLBACK {
+    BOOLEAN InUse;
+    PDEVICE_OBJECT Fdo;
+    PHDAUDIO_DMA_NOTIFICATION_CALLBACK NotificationCallback;
+    PVOID CallbackContext;
+} HDAC_STREAM_CALLBACK, *PHDAC_STREAM_CALLBACK;
+
 typedef struct _HDAC_STREAM {
     struct _FDO_CONTEXT* FdoContext;
     struct _PDO_DEVICE_DATA* PdoContext;
@@ -50,6 +58,7 @@ typedef struct _HDAC_STREAM {
     HDAUDIO_STREAM_FORMAT streamFormat;
 
     PKEVENT registeredEvents[MAX_NOTIF_EVENTS];
+    HDAC_STREAM_CALLBACK registeredCallbacks[MAX_NOTIF_EVENTS];
 
     BOOLEAN running;
     BOOLEAN irqReceived;

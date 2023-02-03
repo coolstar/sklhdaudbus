@@ -495,6 +495,15 @@ void hda_dpc(
 		PHDAC_STREAM stream = &fdoCtx->streams[i];
 		if (stream->irqReceived) {
 			stream->irqReceived = FALSE;
+
+			for (int j = 0; j < MAX_NOTIF_EVENTS; j++) {
+				if (stream->registeredCallbacks[j].InUse) {
+					LARGE_INTEGER unknownVal = { 0 };
+					KeQuerySystemTimePrecise(&unknownVal);
+					stream->registeredCallbacks[j].NotificationCallback(stream->registeredCallbacks[j].CallbackContext, unknownVal);
+				}
+			}
+
 			for (int j = 0; j < MAX_NOTIF_EVENTS; j++) {
 				if (stream->registeredEvents[j]) {
 					KeSetEvent(stream->registeredEvents[j], IO_NO_INCREMENT, FALSE);

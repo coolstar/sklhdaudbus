@@ -608,6 +608,76 @@ NTSTATUS HDA_UnregisterNotificationEvent(
 	return registered ? STATUS_SUCCESS : STATUS_INVALID_PARAMETER;
 }
 
+NTSTATUS HDA_RegisterNotificationCallback(
+	_In_ PVOID _context,
+	_In_ HANDLE Handle,
+	PDEVICE_OBJECT Fdo,
+	PHDAUDIO_DMA_NOTIFICATION_CALLBACK NotificationCallback,
+	PVOID CallbackContext
+) {
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	BOOL registered = FALSE;
+
+	for (int i = 0; i < MAX_NOTIF_EVENTS; i++) {
+		if (stream->registeredCallbacks[i].InUse)
+			continue;
+		stream->registeredCallbacks[i].InUse = TRUE;
+		stream->registeredCallbacks[i].Fdo = Fdo;
+		stream->registeredCallbacks[i].NotificationCallback = NotificationCallback;
+		stream->registeredCallbacks[i].CallbackContext = CallbackContext;
+
+		InterlockedIncrement(&Fdo->ReferenceCount);
+
+		registered = true;
+		break;
+	}
+
+	return registered ? STATUS_SUCCESS : STATUS_INSUFFICIENT_RESOURCES;
+}
+
+NTSTATUS HDA_UnregisterNotificationCallback(
+	_In_ PVOID _context,
+	_In_ HANDLE Handle,
+	PHDAUDIO_DMA_NOTIFICATION_CALLBACK NotificationCallback,
+	PVOID CallbackContext
+) {
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	BOOL registered = FALSE;
+
+	for (int i = 0; i < MAX_NOTIF_EVENTS; i++) {
+		if (stream->registeredCallbacks[i].InUse &&
+			stream->registeredCallbacks[i].NotificationCallback != NotificationCallback &&
+			stream->registeredCallbacks[i].CallbackContext != CallbackContext)
+			continue;
+
+		InterlockedDecrement(&stream->registeredCallbacks[i].Fdo->ReferenceCount);
+
+		RtlZeroMemory(&stream->registeredCallbacks[i], sizeof(stream->registeredCallbacks[i]));
+		registered = true;
+		break;
+	}
+
+	return registered ? STATUS_SUCCESS : STATUS_INVALID_PARAMETER;
+}
+
 HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
 	HDAUDIO_BUS_INTERFACE_V2 busInterface;
 	RtlZeroMemory(&busInterface, sizeof(HDAUDIO_BUS_INTERFACE_V2));
@@ -635,6 +705,39 @@ HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
 	busInterface.FreeDmaBufferWithNotification = HDA_FreeDmaBufferWithNotification;
 	busInterface.RegisterNotificationEvent = HDA_RegisterNotificationEvent;
 	busInterface.UnregisterNotificationEvent = HDA_UnregisterNotificationEvent;
+
+	return busInterface;
+}
+
+HDAUDIO_BUS_INTERFACE_V3 HDA_BusInterfaceV3(PVOID Context) {
+	HDAUDIO_BUS_INTERFACE_V3 busInterface;
+	RtlZeroMemory(&busInterface, sizeof(HDAUDIO_BUS_INTERFACE_V3));
+
+	busInterface.Size = sizeof(HDAUDIO_BUS_INTERFACE_V3);
+	busInterface.Version = 0x0100;
+	busInterface.Context = Context;
+	busInterface.InterfaceReference = WdfDeviceInterfaceReferenceNoOp;
+	busInterface.InterfaceDereference = WdfDeviceInterfaceDereferenceNoOp;
+	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
+	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
+	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;  //TODO
+	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer;
+	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer;
+	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;
+	busInterface.SetDmaEngineState = HDA_SetDmaEngineState;
+	busInterface.GetWallClockRegister = HDA_GetWallClockRegister;
+	busInterface.GetLinkPositionRegister = HDA_GetLinkPositionRegister;
+	busInterface.RegisterEventCallback = HDA_RegisterEventCallback;
+	busInterface.UnregisterEventCallback = HDA_UnregisterEventCallback;
+	busInterface.GetDeviceInformation = HDA_GetDeviceInformation;
+	busInterface.GetResourceInformation = HDA_GetResourceInformation;
+	busInterface.AllocateDmaBufferWithNotification = HDA_AllocateDmaBufferWithNotification;
+	busInterface.FreeDmaBufferWithNotification = HDA_FreeDmaBufferWithNotification;
+	busInterface.RegisterNotificationEvent = HDA_RegisterNotificationEvent;
+	busInterface.UnregisterNotificationEvent = HDA_UnregisterNotificationEvent;
+	busInterface.RegisterNotificationCallback = HDA_RegisterNotificationCallback;
+	busInterface.UnregisterNotificationCallback = HDA_UnregisterNotificationCallback;
 
 	return busInterface;
 }
