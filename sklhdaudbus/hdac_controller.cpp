@@ -160,10 +160,7 @@ NTSTATUS hdac_bus_send_cmd(PFDO_CONTEXT fdoCtx, unsigned int val) {
 
 #define HDA_RIRB_EX_UNSOL_EV	(1<<4)
 
-void hdac_bus_process_unsol_events(WDFWORKITEM workItem) {
-	WDFDEVICE wdfDevice = (WDFDEVICE)WdfWorkItemGetParentObject(workItem);
-	PFDO_CONTEXT fdoCtx = Fdo_GetContext(wdfDevice);
-
+void hdac_bus_process_unsol_events(PFDO_CONTEXT fdoCtx) {
 	UINT rp, caddr, res;
 	while (fdoCtx->unsol_rp != fdoCtx->unsol_wp) {
 		rp = (fdoCtx->unsol_rp + 1) % HDA_UNSOL_QUEUE_SIZE;
@@ -188,8 +185,6 @@ void hdac_bus_process_unsol_events(WDFWORKITEM workItem) {
 
 		UINT tag = response.Unsolicited.Tag;
 		if (codec->unsolitCallbacks[tag].inUse && codec->unsolitCallbacks[tag].Routine) {
-
-
 			codec->unsolitCallbacks[tag].Routine(response, codec->unsolitCallbacks[tag].Context);
 		}
 	}
@@ -233,9 +228,7 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->unsol_queue[wp] = res;
 			fdoCtx->unsol_queue[wp + 1] = res_ex;
 
-			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-				"Attempting to queue workitem for %d\n", addr);
-			//WdfWorkItemEnqueue(fdoCtx->unsolWork);
+			hdac_bus_process_unsol_events(fdoCtx);
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
 			fdoCtx->rirb.res[addr] = res;
