@@ -139,8 +139,6 @@ NTSTATUS HDA_FreeDmaEngine(
 	_In_ PVOID _context,
 	_In_ HANDLE Handle
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -170,8 +168,6 @@ NTSTATUS HDA_SetDmaEngineState(
 	_In_ ULONG NumberOfHandles,
 	_In_reads_(NumberOfHandles) PHANDLE Handles
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -245,8 +241,6 @@ NTSTATUS HDA_RegisterEventCallback(
 	_In_opt_ PVOID Context,
 	_Out_ PUCHAR Tag
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
 
@@ -263,7 +257,6 @@ NTSTATUS HDA_RegisterEventCallback(
 		if (Tag)
 			*Tag = i;
 
-		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Allocated tag %d!\n", __func__, i);
 		devData->unsolitCallbacks[i].inUse = TRUE;
 		devData->unsolitCallbacks[i].Context = Context;
 		devData->unsolitCallbacks[i].Routine = Routine;
@@ -284,14 +277,11 @@ NTSTATUS HDA_UnregisterEventCallback(
 	_In_ PVOID _context,
 	_In_ UCHAR Tag
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-
 	if (!_context)
 		return STATUS_NO_SUCH_DEVICE;
 
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->unsolitCallbacks[Tag].inUse) {
-		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s Not registered!\n", __func__);
 		return STATUS_NOT_FOUND;
 	}
 
@@ -345,8 +335,6 @@ void HDA_GetResourceInformation(
 		*CodecAddress = devData->CodecIds.CodecAddress;
 	if (FunctionGroupStartNode)
 		*FunctionGroupStartNode = devData->CodecIds.FunctionGroupStartNode;
-
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Addr: %d, Start: %d)!\n", __func__, devData->CodecIds.CodecAddress, devData->CodecIds.FunctionGroupStartNode);
 }
 
 NTSTATUS HDA_AllocateDmaBufferWithNotification(
@@ -360,8 +348,6 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	_Out_ PUCHAR StreamId,
 	_Out_ PULONG FifoSize
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Requested: %lld bytes, IRQL: %d)!\n", __func__, RequestedBufferSize, KeGetCurrentIrql());
-
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -537,8 +523,6 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s done!\n", __func__);
-
 	return STATUS_SUCCESS;
 }
 
@@ -567,8 +551,6 @@ NTSTATUS HDA_RegisterNotificationEvent(
 	_In_ HANDLE Handle,
 	_In_ PKEVENT NotificationEvent
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -597,8 +579,6 @@ NTSTATUS HDA_UnregisterNotificationEvent(
 	_In_ HANDLE Handle,
 	_In_ PKEVENT NotificationEvent
 ) {
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -643,7 +623,7 @@ HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
 	busInterface.GetLinkPositionRegister = HDA_GetLinkPositionRegister;
 	busInterface.RegisterEventCallback = HDA_RegisterEventCallback;
 	busInterface.UnregisterEventCallback = HDA_UnregisterEventCallback;
-	busInterface.GetDeviceInformation = HDA_GetDeviceInformation;  //TODO
+	busInterface.GetDeviceInformation = HDA_GetDeviceInformation;
 	busInterface.GetResourceInformation = HDA_GetResourceInformation;
 	busInterface.AllocateDmaBufferWithNotification = HDA_AllocateDmaBufferWithNotification;
 	busInterface.FreeDmaBufferWithNotification = HDA_FreeDmaBufferWithNotification;
