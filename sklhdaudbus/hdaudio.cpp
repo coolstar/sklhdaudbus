@@ -318,6 +318,12 @@ NTSTATUS HDA_GetDeviceInformation(
 		DeviceInformation->DriverVersion = 0x100;
 		DeviceInformation->IsStripingSupported = TRUE;
 	}
+	if (DeviceInformation->Size >= sizeof(HDAUDIO_DEVICE_INFORMATION_V2)) {
+		PHDAUDIO_DEVICE_INFORMATION_V2 DeviceInformationV2 = (PHDAUDIO_DEVICE_INFORMATION_V2)DeviceInformation;
+		DeviceInformationV2->CtrlRevision = devData->FdoContext->revId;
+		DeviceInformationV2->CtrlVendorId = devData->FdoContext->venId;
+		DeviceInformationV2->CtrlDeviceId = devData->FdoContext->devId;
+	}
 
 	return STATUS_SUCCESS;
 }

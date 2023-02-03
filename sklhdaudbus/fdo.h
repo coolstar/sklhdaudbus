@@ -69,6 +69,7 @@ typedef struct _FDO_CONTEXT
 
     UINT16 venId;
     UINT16 devId;
+    UINT8 revId;
 
     PCI_BAR m_BAR0; //required
     PCI_BAR m_BAR4; //Intel AudioDSP

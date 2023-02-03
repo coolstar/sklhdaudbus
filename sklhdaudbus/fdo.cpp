@@ -227,6 +227,7 @@ Fdo_EvtDevicePrepareHardware(
 
     fdoCtx->BusInterface.GetBusData(fdoCtx->BusInterface.Context, PCI_WHICHSPACE_CONFIG, &fdoCtx->venId, 0, sizeof(UINT16));
     fdoCtx->BusInterface.GetBusData(fdoCtx->BusInterface.Context, PCI_WHICHSPACE_CONFIG, &fdoCtx->devId, 2, sizeof(UINT16));
+    fdoCtx->BusInterface.GetBusData(fdoCtx->BusInterface.Context, PCI_WHICHSPACE_CONFIG, &fdoCtx->revId, 1, sizeof(UINT8));
 
     //mlcap & lctl (hda_intel_init_chip)
     if (fdoCtx->venId == VEN_INTEL) {
