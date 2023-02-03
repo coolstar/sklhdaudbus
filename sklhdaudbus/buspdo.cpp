@@ -89,7 +89,7 @@ Return Value:
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
-    return lhs->FdoContext == rhs->FdoContext && RtlCompareMemory(&lhs->CodecIds, &rhs->CodecIds, sizeof(lhs->CodecIds)) == 0;
+    return (lhs->FdoContext == rhs->FdoContext) && (RtlCompareMemory(&lhs->CodecIds, &rhs->CodecIds, sizeof(lhs->CodecIds) == 0));
 }
 
 VOID
