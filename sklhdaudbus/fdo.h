@@ -23,7 +23,6 @@ typedef struct _HDAC_STREAM {
     struct _PDO_DEVICE_DATA* PdoContext;
 
     PMDL mdlBuf;
-    UINT8 *virtAddr;
     UINT32* posbuf;
 
     UINT32* bdl;
@@ -102,8 +101,6 @@ typedef struct _FDO_CONTEXT
     //bit flags of detected codecs
     UINT16 codecMask;
     USHORT numCodecs;
-
-    UINT32 runCount;
 
     HDAC_RB corb;
     HDAC_RB rirb;

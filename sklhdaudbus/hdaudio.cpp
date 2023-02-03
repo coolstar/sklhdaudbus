@@ -23,23 +23,24 @@ NTSTATUS HDA_TransferCodecVerbs(
 
 	for (ULONG i = 0; i < Count; i++) {
 		PHDAUDIO_CODEC_TRANSFER transfer = &CodecTransfer[i];
-		/*if ((transfer->Output.Command & 0x70000) == 0x70000) {
-			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Command8: 0x%x (Node: 0x%x, Verb: 0x%x, Parameter: 0x%x)\n", transfer->Output.Command, transfer->Output.Verb8.Node, transfer->Output.Verb8.VerbId, transfer->Output.Verb8.Data);
-		} 
-		else {
-			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Command16: 0x%x (Node: 0x%x, Verb: 0x%x, Parameter: 0x%x)\n", transfer->Output.Command, transfer->Output.Verb16.Node, transfer->Output.Verb16.VerbId, transfer->Output.Verb16.Data);
-		}*/
 		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
 		UINT32 response = 0;
+		DbgPrint("Command: 0x%x\n", transfer->Output.Command);
 		status = hdac_bus_exec_verb(devData->FdoContext, devData->CodecIds.CodecAddress, transfer->Output.Command, &response);
 		transfer->Input.Response = response;
 		if (NT_SUCCESS(status)) {
 			transfer->Input.IsValid = 1;
-			//DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
+			DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
 		} else {
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL, "%s: Verb exec failed! 0x%x\n", __func__, status);
 		}
 	}
+
+	LARGE_INTEGER Interval;
+	Interval.QuadPart = -10 * 1000;
+	KeDelayExecutionThread(KernelMode, FALSE, &Interval);
+
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
 
 	if (Callback) {
 		DbgPrint("Got Callback\n");
@@ -417,7 +418,6 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	//UINT32 minBuf = 0x1000 * 250;
 	PMDL mdl = MmAllocatePagesForMdl(lowAddr, maxAddr, skipBytes, RequestedBufferSize);
 	if (!mdl) {
 		return STATUS_NO_MEMORY;
@@ -427,14 +427,6 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	stream->mdlBuf = mdl;
 	stream->bufSz = MmGetMdlByteCount(mdl);
 
-	stream->virtAddr = (UINT8*)MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmWriteCombined, NULL, FALSE, MdlMappingNoExecute | NormalPagePriority);
-
-	/*UINT32 smallestCopy = min(stream->bufSz, crabrave_size);
-	DbgPrint("Mapped Buf: 0x%llx\n", stream->virtAddr);
-	for (int i = 0; i < smallestCopy; i++) {
-		stream->virtAddr[i] = crabrave[i];
-	}*/
-
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
 	*BufferMdl = mdl;
@@ -442,21 +434,48 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	*OffsetFromFirstPage = MmGetMdlByteOffset(mdl);
 	*StreamId = stream->streamTag;
 
+	int frags = 0;
+	{
+		//Set up the BDL
+		UINT32* bdl = stream->bdl;
+		INT64 size = stream->bufSz;
+		PPFN_NUMBER pfnArray = MmGetMdlPfnArray(mdl);
+		DbgPrint("PFN: %x\n", pfnArray[0]);
+		UINT32 offset = 0;
+		while (size > 0) {
+			if (frags > HDA_MAX_BDL_ENTRIES) {
+				DbgPrint("Too many BDL entries!\n");
+				frags = HDA_MAX_BDL_ENTRIES;
+				break;
+			}
+
+			UINT32 chunk = PAGE_SIZE;
+			PFN_NUMBER pfn = pfnArray[frags];
+			PHYSICAL_ADDRESS addr = { 0 };
+			addr.QuadPart = pfn << PAGE_SHIFT;
+			/* program the address field of the BDL entry */
+			bdl[0] = addr.LowPart;
+			bdl[1] = addr.HighPart;
+			/* program the size field of the BDL entry */
+			bdl[2] = chunk;
+			/* program the IOC to enable interrupt
+			 * only when the whole fragment is processed
+			 */
+			size -= chunk;
+			bdl[3] = (size > 0) ? 0 : 1;
+			bdl += 4;
+			frags++;
+			offset += chunk;
+		}
+	}
+	DbgPrint("Buf Sz: %d, frags: %d\n", stream->bufSz, frags);
+	stream->frags = frags;
+
 	hdac_stream_setup(stream);
 
 	*FifoSize = stream->fifoSize;
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s: Requested %lld, got %lld bytes (Fifo %ld, offset %lld)\n", __func__, RequestedBufferSize, *AllocatedBufferSize, *FifoSize, *OffsetFromFirstPage);
-
-	/*if (devData->FdoContext->runCount == 3) {
-		hdac_stream_start(stream);
-
-		mdelay(5000);
-
-		hdac_stream_stop(stream);
-	}*/
-
-	devData->FdoContext->runCount++;
 
 	return STATUS_SUCCESS;
 }
@@ -493,49 +512,9 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	stream_write32(stream, SD_BDLPU, 0);
 	stream_write32(stream, SD_CTL, 0);
 
-	if (stream->virtAddr) {
-		MmUnmapLockedPages(stream->virtAddr, stream->mdlBuf);
-		stream->virtAddr = NULL;
-	}
-
 	MmFreePagesFromMdlEx(stream->mdlBuf, MM_DONT_ZERO_ALLOCATION);
 	ExFreePool(stream->mdlBuf);
 	stream->mdlBuf = NULL;
-
-	int frags = 0;
-	{
-		//Set up the BDL
-		UINT32* bdl = stream->bdl;
-		INT64 size = stream->bufSz;
-		UINT8* buf = stream->virtAddr;
-		DbgPrint("Buf: 0x%llx\n", buf);
-		UINT32 offset = 0;
-		while (size > 0) {
-			if (frags > HDA_MAX_BDL_ENTRIES) {
-				DbgPrint("Too many BDL entries!\n");
-				frags = HDA_MAX_BDL_ENTRIES;
-				break;
-			}
-
-			UINT32 chunk = PAGE_SIZE;
-			PHYSICAL_ADDRESS addr = MmGetPhysicalAddress(buf + offset);
-			/* program the address field of the BDL entry */
-			bdl[0] = addr.LowPart;
-			bdl[1] = addr.HighPart;
-			/* program the size field of the BDL entry */
-			bdl[2] = chunk;
-			/* program the IOC to enable interrupt
-			 * only when the whole fragment is processed
-			 */
-			size -= chunk;
-			bdl[3] = (size > 0) ? 0 : 1;
-			bdl += 4;
-			frags++;
-			offset += chunk;
-		}
-	}
-	DbgPrint("Buf Sz: %d, frags: %d\n", stream->bufSz, frags);
-	stream->frags = frags;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
