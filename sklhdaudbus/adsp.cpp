@@ -91,7 +91,6 @@ NTSTATUS ADSPGetRenderStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFo
 
 		stream->stripe = FALSE;
 		stream->PdoContext = devData;
-		stream->prepared = FALSE;
 		stream->running = FALSE;
 		stream->streamFormat = StreamFormat;
 
@@ -137,7 +136,6 @@ NTSTATUS ADSPGetCaptureStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamF
 
 		stream->stripe = FALSE;
 		stream->PdoContext = devData;
-		stream->prepared = FALSE;
 		stream->running = FALSE;
 		stream->streamFormat = StreamFormat;
 
@@ -180,7 +178,7 @@ NTSTATUS ADSPFreeStream(
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 
-	if (stream->prepared || stream->running) {
+	if (stream->running) {
 		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 		return STATUS_INVALID_DEVICE_REQUEST;
 	}
@@ -219,7 +217,7 @@ NTSTATUS ADSPPrepareDSP(
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 
-	if (stream->prepared || stream->running) {
+	if (stream->running) {
 		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 		return STATUS_DEVICE_BUSY;
 	}

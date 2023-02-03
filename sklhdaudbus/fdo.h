@@ -14,6 +14,7 @@ typedef struct _PCI_BAR {
 #include "adsp.h"
 
 #define HDA_UNSOL_QUEUE_SIZE	64
+#define MAX_NOTIF_EVENTS 16
 #define HDA_MAX_CODECS		8	/* limit by controller side */
 
 struct _FDO_CONTEXT;
@@ -48,7 +49,9 @@ typedef struct _HDAC_STREAM {
 
     HDAUDIO_STREAM_FORMAT streamFormat;
 
-    BOOLEAN running, prepared;
+    PKEVENT registeredEvents[MAX_NOTIF_EVENTS];
+
+    BOOLEAN running;
 } HDAC_STREAM, *PHDAC_STREAM;
 
 typedef struct _HDAC_RB {

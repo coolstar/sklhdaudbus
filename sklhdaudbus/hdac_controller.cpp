@@ -337,7 +337,7 @@ NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
 
 	// Wait >= 540us for codecs to initialize
 
-	udelay(1200);
+	udelay(1000);
 
 	// Check if controller is ready
 	if (!hda_read8(fdoCtx, GCTL)) {
@@ -428,6 +428,12 @@ int hda_stream_interrupt(PFDO_CONTEXT fdoCtx, unsigned int status) {
 			UINT8 sd_status = stream_read8(stream, SD_STS);
 			stream_write8(stream, SD_STS, SD_INT_MASK);
 			handled |= 1 << stream->idx;
+
+			for (int i = 0; i < MAX_NOTIF_EVENTS; i++) {
+				if (stream->registeredEvents[i]) {
+					KeSetEvent(stream->registeredEvents[i], IO_NO_INCREMENT, FALSE);
+				}
+			}
 		}
 	}
 	return handled;

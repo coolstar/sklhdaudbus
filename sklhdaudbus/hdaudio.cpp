@@ -25,20 +25,16 @@ NTSTATUS HDA_TransferCodecVerbs(
 		PHDAUDIO_CODEC_TRANSFER transfer = &CodecTransfer[i];
 		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
 		UINT32 response = 0;
-		DbgPrint("Command: 0x%x\n", transfer->Output.Command);
+		//DbgPrint("Command: 0x%x\n", transfer->Output.Command);
 		status = hdac_bus_exec_verb(devData->FdoContext, devData->CodecIds.CodecAddress, transfer->Output.Command, &response);
 		transfer->Input.Response = response;
 		if (NT_SUCCESS(status)) {
 			transfer->Input.IsValid = 1;
-			DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
+			//DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
 		} else {
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL, "%s: Verb exec failed! 0x%x\n", __func__, status);
 		}
 	}
-
-	LARGE_INTEGER Interval;
-	Interval.QuadPart = -10 * 1000;
-	KeDelayExecutionThread(KernelMode, FALSE, &Interval);
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
 
@@ -90,7 +86,6 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 
 		stream->stripe = Stripe;
 		stream->PdoContext = devData;
-		stream->prepared = FALSE;
 		stream->running = FALSE;
 		stream->streamFormat = *StreamFormat;
 
@@ -194,7 +189,7 @@ NTSTATUS HDA_FreeDmaEngine(
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 
-	if (stream->prepared || stream->running) {
+	if (stream->running) {
 		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 		return STATUS_INVALID_DEVICE_REQUEST;
 	}
@@ -212,7 +207,41 @@ NTSTATUS HDA_SetDmaEngineState(
 	_In_reads_(NumberOfHandles) PHANDLE Handles
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	for (int i = 0; i < NumberOfHandles; i++) {
+		PHDAC_STREAM stream = (PHDAC_STREAM)Handles[i];
+		if (stream->PdoContext != devData) {
+			return STATUS_INVALID_HANDLE;
+		}
+
+		WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+
+		if (StreamState == RunState && !stream->running) {
+			hdac_stream_start(stream);
+			stream->running = TRUE;
+		}
+		else if ((StreamState == PauseState || StreamState == StopState) && stream->running) {
+			hdac_stream_stop(stream);
+			stream->running = FALSE;
+		}
+		else if (StreamState == ResetState) {
+			if (!stream->running) {
+				hdac_stream_reset(stream);
+			}
+			else {
+				return STATUS_INVALID_PARAMETER;
+			}
+		}
+
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	}
+
+	return STATUS_SUCCESS;
 }
 
 VOID HDA_GetWallClockRegister(
@@ -398,7 +427,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 		return STATUS_INVALID_HANDLE;
 	}
 
-	if (stream->prepared || stream->running) {
+	if (stream->running) {
 		return STATUS_INVALID_DEVICE_REQUEST;
 	}
 
@@ -425,14 +454,16 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	stream->mdlBuf = mdl;
-	stream->bufSz = MmGetMdlByteCount(mdl);
+	stream->bufSz = RequestedBufferSize;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
 	*BufferMdl = mdl;
-	*AllocatedBufferSize = MmGetMdlByteCount(mdl);
+	*AllocatedBufferSize = RequestedBufferSize;
 	*OffsetFromFirstPage = MmGetMdlByteOffset(mdl);
 	*StreamId = stream->streamTag;
+
+	DbgPrint("Notification Count: %d\n", NotificationCount);
 
 	int frags = 0;
 	{
@@ -440,7 +471,6 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 		UINT32* bdl = stream->bdl;
 		INT64 size = stream->bufSz;
 		PPFN_NUMBER pfnArray = MmGetMdlPfnArray(mdl);
-		DbgPrint("PFN: %x\n", pfnArray[0]);
 		UINT32 offset = 0;
 		while (size > 0) {
 			if (frags > HDA_MAX_BDL_ENTRIES) {
@@ -457,7 +487,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 			bdl[0] = addr.LowPart;
 			bdl[1] = addr.HighPart;
 			/* program the size field of the BDL entry */
-			bdl[2] = chunk;
+			bdl[2] = (size > chunk) ? chunk : size;
 			/* program the IOC to enable interrupt
 			 * only when the whole fragment is processed
 			 */
@@ -468,15 +498,11 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 			offset += chunk;
 		}
 	}
-	DbgPrint("Buf Sz: %d, frags: %d\n", stream->bufSz, frags);
 	stream->frags = frags;
 
 	hdac_stream_setup(stream);
 
 	*FifoSize = stream->fifoSize;
-
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s: Requested %lld, got %lld bytes (Fifo %ld, offset %lld)\n", __func__, RequestedBufferSize, *AllocatedBufferSize, *FifoSize, *OffsetFromFirstPage);
-
 	return STATUS_SUCCESS;
 }
 
@@ -498,7 +524,7 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 		return STATUS_INVALID_HANDLE;
 	}
 
-	if (stream->prepared || stream->running) {
+	if (stream->running) {
 		return STATUS_INVALID_DEVICE_REQUEST;
 	}
 
@@ -529,7 +555,27 @@ NTSTATUS HDA_RegisterNotificationEvent(
 	_In_ PKEVENT NotificationEvent
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	BOOL registered = FALSE;
+
+	for (int i = 0; i < MAX_NOTIF_EVENTS; i++) {
+		if (stream->registeredEvents[i])
+			continue;
+		stream->registeredEvents[i] = NotificationEvent;
+		registered = true;
+	}
+
+	return registered ? STATUS_SUCCESS : STATUS_INSUFFICIENT_RESOURCES;
 }
 
 NTSTATUS HDA_UnregisterNotificationEvent(
@@ -538,7 +584,27 @@ NTSTATUS HDA_UnregisterNotificationEvent(
 	_In_ PKEVENT NotificationEvent
 ) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
-	return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	BOOL registered = FALSE;
+
+	for (int i = 0; i < MAX_NOTIF_EVENTS; i++) {
+		if (stream->registeredEvents[i] != NotificationEvent)
+			continue;
+		stream->registeredEvents[i] = NULL;
+		registered = true;
+	}
+
+	return registered ? STATUS_SUCCESS : STATUS_INVALID_PARAMETER;
 }
 
 HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
