@@ -52,6 +52,7 @@ typedef struct _HDAC_STREAM {
     PKEVENT registeredEvents[MAX_NOTIF_EVENTS];
 
     BOOLEAN running;
+    BOOLEAN irqReceived;
 } HDAC_STREAM, *PHDAC_STREAM;
 
 typedef struct _HDAC_RB {
@@ -96,6 +97,7 @@ typedef struct _FDO_CONTEXT
     //unsolicited events
     UINT32 unsol_queue[HDA_UNSOL_QUEUE_SIZE * 2];
     UINT unsol_rp, unsol_wp;
+    BOOL processUnsol;
 
     //bit flags of detected codecs
     UINT16 codecMask;

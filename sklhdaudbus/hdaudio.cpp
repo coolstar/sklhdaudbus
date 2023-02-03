@@ -89,42 +89,9 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 		stream->running = FALSE;
 		stream->streamFormat = *StreamFormat;
 
-		ConverterFormat->ConverterFormat = 0;
-		switch (StreamFormat->ValidBitsPerSample) {
-		case 32:
-			ConverterFormat->BitsPerSample = 4;
-			break;
-		case 24:
-			ConverterFormat->BitsPerSample = 3;
-			break;
-		case 20:
-			ConverterFormat->BitsPerSample = 2;
-			break;
-		case 16:
-			ConverterFormat->BitsPerSample = 1;
-			break;
-		case 8:
-		default:
-			ConverterFormat->BitsPerSample = 1;
-			break;
-		}
-		ConverterFormat->NumberOfChannels = StreamFormat->NumberOfChannels - 1;
-		switch (StreamFormat->SampleRate) {
-		case 192000:
-			ConverterFormat->SampleRate = 24;
-			break;
-		case 96000:
-			ConverterFormat->SampleRate = 8;
-			break;
-		case 48000:
-			ConverterFormat->SampleRate = 0;
-			break;
-		case 44100:
-		default:
-			ConverterFormat->SampleRate = 64;
-			break;
-		}
-		ConverterFormat->StreamType = 0;
+		ConverterFormat->ConverterFormat = hdac_format(stream);
+
+		DbgPrint("Converter format: %x\n", ConverterFormat->ConverterFormat);
 
 		if (Handle)
 			*Handle = (HANDLE)stream;
@@ -231,7 +198,7 @@ NTSTATUS HDA_SetDmaEngineState(
 		}
 		else if (StreamState == ResetState) {
 			if (!stream->running) {
-				hdac_stream_reset(stream);
+				//hdac_stream_reset(stream);
 			}
 			else {
 				return STATUS_INVALID_PARAMETER;
@@ -435,19 +402,25 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 		return STATUS_INVALID_DEVICE_REQUEST;
 	}
 
-	PHYSICAL_ADDRESS lowAddr;
-	lowAddr.QuadPart = 0;
+	PHYSICAL_ADDRESS zeroAddr;
+	zeroAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
 	maxAddr.QuadPart = MAXUINT64;
-
-	PHYSICAL_ADDRESS skipBytes;
-	skipBytes.QuadPart = 0;
 
 	if (KeGetCurrentIrql() > APC_LEVEL) {
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	PMDL mdl = MmAllocatePagesForMdl(lowAddr, maxAddr, skipBytes, RequestedBufferSize);
+	SIZE_T allocSize = RequestedBufferSize;
+	SIZE_T allocOffset = 0;
+	SIZE_T halfSize = 0;
+	if (NotificationCount == 2) {
+		halfSize = RequestedBufferSize / 2;
+		allocOffset = PAGE_SIZE - (halfSize % PAGE_SIZE);
+		allocSize = RequestedBufferSize + allocOffset;
+	}
+
+	PMDL mdl = MmAllocatePagesForMdl(zeroAddr, maxAddr, zeroAddr, allocSize);
 	if (!mdl) {
 		return STATUS_NO_MEMORY;
 	}
@@ -456,22 +429,56 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	stream->mdlBuf = mdl;
 	stream->bufSz = RequestedBufferSize;
 
-	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
-
 	*BufferMdl = mdl;
 	*AllocatedBufferSize = RequestedBufferSize;
-	*OffsetFromFirstPage = MmGetMdlByteOffset(mdl);
+	*OffsetFromFirstPage = allocOffset;
 	*StreamId = stream->streamTag;
 
 	DbgPrint("Notification Count: %d\n", NotificationCount);
 
-	int frags = 0;
 	{
+		int frags = 0;
+		int pageNum = 0;
+
 		//Set up the BDL
 		UINT32* bdl = stream->bdl;
-		INT64 size = stream->bufSz;
+		INT64 size = RequestedBufferSize;
+
 		PPFN_NUMBER pfnArray = MmGetMdlPfnArray(mdl);
-		UINT32 offset = 0;
+		UINT32 offset = allocOffset;
+		while (halfSize > 0) {
+			if (frags > HDA_MAX_BDL_ENTRIES) {
+				DbgPrint("Too many BDL entries!\n");
+				frags = HDA_MAX_BDL_ENTRIES;
+				break;
+			}
+
+			UINT32 pageOff = offset % PAGE_SIZE;
+			UINT32 chunk = (pageOff == 0) ? PAGE_SIZE : (PAGE_SIZE - pageOff);
+			if (halfSize < chunk)
+				chunk = halfSize;
+
+			PFN_NUMBER pfn = pfnArray[pageNum];
+			PHYSICAL_ADDRESS addr = { 0 };
+			addr.QuadPart = pfn << PAGE_SHIFT;
+			/* program the address field of the BDL entry */
+			bdl[0] = addr.LowPart + pageOff;
+			bdl[1] = addr.HighPart;
+			/* program the size field of the BDL entry */
+			bdl[2] = chunk;
+			/* program the IOC to enable interrupt
+			 * only when the whole fragment is processed
+			 */
+			halfSize -= chunk;
+			size -= chunk;
+			bdl[3] = (halfSize > 0) ? 0 : 1;
+			bdl += 4;
+			frags++;
+			offset += chunk;
+			if ((offset % PAGE_SIZE) == 0)
+				pageNum++;
+		}
+
 		while (size > 0) {
 			if (frags > HDA_MAX_BDL_ENTRIES) {
 				DbgPrint("Too many BDL entries!\n");
@@ -479,15 +486,19 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 				break;
 			}
 
-			UINT32 chunk = PAGE_SIZE;
-			PFN_NUMBER pfn = pfnArray[frags];
+			UINT32 pageOff = offset % PAGE_SIZE;
+			UINT32 chunk = (pageOff == 0) ? PAGE_SIZE : (PAGE_SIZE - pageOff);
+			if (size < chunk)
+				chunk = size;
+
+			PFN_NUMBER pfn = pfnArray[pageNum];
 			PHYSICAL_ADDRESS addr = { 0 };
 			addr.QuadPart = pfn << PAGE_SHIFT;
 			/* program the address field of the BDL entry */
-			bdl[0] = addr.LowPart;
+			bdl[0] = addr.LowPart + pageOff;
 			bdl[1] = addr.HighPart;
 			/* program the size field of the BDL entry */
-			bdl[2] = (size > chunk) ? chunk : size;
+			bdl[2] = chunk;
 			/* program the IOC to enable interrupt
 			 * only when the whole fragment is processed
 			 */
@@ -496,10 +507,15 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 			bdl += 4;
 			frags++;
 			offset += chunk;
+			if ((offset % PAGE_SIZE) == 0)
+				pageNum++;
 		}
+		stream->frags = frags;
 	}
-	stream->frags = frags;
 
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	hdac_stream_reset(stream);
 	hdac_stream_setup(stream);
 
 	*FifoSize = stream->fifoSize;
@@ -573,6 +589,7 @@ NTSTATUS HDA_RegisterNotificationEvent(
 			continue;
 		stream->registeredEvents[i] = NotificationEvent;
 		registered = true;
+		break;
 	}
 
 	return registered ? STATUS_SUCCESS : STATUS_INSUFFICIENT_RESOURCES;
@@ -602,6 +619,7 @@ NTSTATUS HDA_UnregisterNotificationEvent(
 			continue;
 		stream->registeredEvents[i] = NULL;
 		registered = true;
+		break;
 	}
 
 	return registered ? STATUS_SUCCESS : STATUS_INVALID_PARAMETER;

@@ -137,7 +137,7 @@ Fdo_Initialize(
     WDF_INTERRUPT_CONFIG_INIT(
         &interruptConfig,
         hda_interrupt,
-        NULL);
+        hda_dpc);
 
     status = WdfInterruptCreate(
         device,

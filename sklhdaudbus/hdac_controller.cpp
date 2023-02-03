@@ -4,15 +4,16 @@ static void hda_clear_corbrp(PFDO_CONTEXT fdoCtx) {
 	//Clear the CORB read pointer
 	int timeout;
 
-	//TODO: Re-enable
-	for (timeout = 1000; timeout > 0; timeout--) {
-		if (hda_read16(fdoCtx, CORBRP) & HDA_CORBRP_RST)
-			break;
-		udelay(1);
-	}
-	if (timeout <= 0) {
-		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT,
-			"CORB reset timeout#1, CORBRP = %d\n", hda_read16(fdoCtx, CORBRP));
+	if (fdoCtx->venId != 0x15AD) {
+		for (timeout = 1000; timeout > 0; timeout--) {
+			if (hda_read16(fdoCtx, CORBRP) & HDA_CORBRP_RST)
+				break;
+			udelay(1);
+		}
+		if (timeout <= 0) {
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT,
+				"CORB reset timeout#1, CORBRP = %d\n", hda_read16(fdoCtx, CORBRP));
+		}
 	}
 
 	hda_write16(fdoCtx, CORBRP, 0);
@@ -228,7 +229,7 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->unsol_queue[wp] = res;
 			fdoCtx->unsol_queue[wp + 1] = res_ex;
 
-			hdac_bus_process_unsol_events(fdoCtx);
+			fdoCtx->processUnsol = TRUE;
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
 			fdoCtx->rirb.res[addr] = res;
@@ -422,11 +423,7 @@ int hda_stream_interrupt(PFDO_CONTEXT fdoCtx, unsigned int status) {
 			stream_write8(stream, SD_STS, SD_INT_MASK);
 			handled |= 1 << stream->idx;
 
-			for (int i = 0; i < MAX_NOTIF_EVENTS; i++) {
-				if (stream->registeredEvents[i]) {
-					KeSetEvent(stream->registeredEvents[i], IO_NO_INCREMENT, FALSE);
-				}
-			}
+			stream->irqReceived = TRUE;
 		}
 	}
 	return handled;
@@ -457,8 +454,10 @@ BOOLEAN hda_interrupt(
 		handled = TRUE;
 		active = FALSE;
 
-		if (hda_stream_interrupt(fdoCtx, status))
+		if (hda_stream_interrupt(fdoCtx, status)) {
+			WdfInterruptQueueDpcForIsr(Interrupt);
 			active = TRUE;
+		}
 
 		status = hda_read16(fdoCtx, RIRBSTS);
 		if (status & RIRB_INT_MASK) {
@@ -478,7 +477,36 @@ BOOLEAN hda_interrupt(
 		}
 	} while (active && ++repeat < 10);
 
+	if (fdoCtx->processUnsol) {
+		WdfInterruptQueueDpcForIsr(Interrupt);
+	}
+
 	return handled;
+}
+
+void hda_dpc(
+	WDFINTERRUPT Interrupt,
+	WDFOBJECT AssociatedObject
+) {
+	WDFDEVICE Device = WdfInterruptGetDevice(Interrupt);
+	PFDO_CONTEXT fdoCtx = Fdo_GetContext(Device);
+
+	for (int i = 0; i < fdoCtx->numStreams; i++) {
+		PHDAC_STREAM stream = &fdoCtx->streams[i];
+		if (stream->irqReceived) {
+			stream->irqReceived = FALSE;
+			for (int j = 0; j < MAX_NOTIF_EVENTS; j++) {
+				if (stream->registeredEvents[j]) {
+					KeSetEvent(stream->registeredEvents[j], IO_NO_INCREMENT, FALSE);
+				}
+			}
+		}
+	}
+
+	if (fdoCtx->processUnsol) {
+		fdoCtx->processUnsol = FALSE;
+		hdac_bus_process_unsol_events(fdoCtx);
+	}
 }
 
 NTSTATUS hdac_bus_exec_verb_unlocked(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32 cmd, UINT32* res) {
