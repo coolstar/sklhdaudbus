@@ -78,6 +78,9 @@ typedef struct _FDO_CONTEXT
     UINT8* ppcap;
     UINT8* spbcap;
 
+    BOOLEAN is64BitOK;
+    UINT32 hwVersion;
+
     UINT32 captureIndexOff;
     UINT32 playbackIndexOff;
     UINT32 captureStreams;

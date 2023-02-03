@@ -295,6 +295,13 @@ Fdo_EvtDevicePrepareHardware(
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "chipset global capabilities = 0x%x\n", gcap);
 
+    fdoCtx->is64BitOK = (gcap & 0x1);
+    if (!fdoCtx->is64BitOK) {
+        return STATUS_DEVICE_PROTOCOL_ERROR; //64 bit required
+    }
+
+    fdoCtx->hwVersion = (hda_read8(fdoCtx, VMAJ) << 8) | hda_read8(fdoCtx, VMIN);
+
     fdoCtx->captureStreams = (gcap >> 8) & 0x0f;
     fdoCtx->playbackStreams = (gcap >> 12) & 0x0f;
 
