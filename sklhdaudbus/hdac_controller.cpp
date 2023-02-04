@@ -105,14 +105,14 @@ NTSTATUS GetHDACapabilities(PFDO_CONTEXT fdoCtx) {
 }
 
 void HDAInitCorb(PFDO_CONTEXT fdoCtx) {
+	//Set the corb size to 256 entries
+	hda_write8(fdoCtx, CORBSIZE, 0x02);
+
 	//Setup CORB address
 	fdoCtx->corb.buf = (UINT32*)fdoCtx->rb;
 	fdoCtx->corb.addr = MmGetPhysicalAddress(fdoCtx->corb.buf);
 	hda_write32(fdoCtx, CORBLBASE, fdoCtx->corb.addr.LowPart);
 	hda_write32(fdoCtx, CORBUBASE, fdoCtx->corb.addr.HighPart);
-
-	//Set the corb size to 256 entries
-	hda_write8(fdoCtx, CORBSIZE, 0x02);
 
 	//Set WP and RP
 	fdoCtx->corb.wp = 0;
@@ -125,15 +125,15 @@ void HDAInitCorb(PFDO_CONTEXT fdoCtx) {
 }
 
 void HDAInitRirb(PFDO_CONTEXT fdoCtx) {
+	//Set the rirb size to 256 entries
+	hda_write8(fdoCtx, RIRBSIZE, 0x02);
+
 	//Setup CORB address
 	fdoCtx->rirb.buf = (UINT32*)(fdoCtx->rb + 0x800);
 	fdoCtx->rirb.addr = MmGetPhysicalAddress(fdoCtx->rirb.buf);
 	RtlZeroMemory(fdoCtx->rirb.cmds, sizeof(fdoCtx->rirb.cmds));
 	hda_write32(fdoCtx, RIRBLBASE, fdoCtx->rirb.addr.LowPart);
 	hda_write32(fdoCtx, RIRBUBASE, fdoCtx->rirb.addr.HighPart);
-
-	//Set the rirb size to 256 entries
-	hda_write8(fdoCtx, RIRBSIZE, 0x02);
 
 	//Set WP and RP
 	fdoCtx->rirb.rp = 0;
