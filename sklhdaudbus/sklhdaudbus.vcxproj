@@ -144,7 +144,6 @@
   <ItemGroup>
     <ClInclude Include="adsp.h" />
     <ClInclude Include="buspdo.h" />
-    <ClInclude Include="crabrave.h" />
     <ClInclude Include="driver.h" />
     <ClInclude Include="fdo.h" />
     <ClInclude Include="hdac_controller.h" />

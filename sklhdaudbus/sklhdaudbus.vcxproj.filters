@@ -70,9 +70,6 @@
     <ClInclude Include="hdac_stream.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="crabrave.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="adsp.h">
       <Filter>Headers</Filter>
     </ClInclude>
