@@ -350,7 +350,7 @@ NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
 
 void hda_int_clear(PFDO_CONTEXT fdoCtx) {
 	//Clear stream status
-	for (int i = 0; i < fdoCtx->numStreams; i++) {
+	for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
 		stream_write8(&fdoCtx->streams[i], SD_STS, SD_INT_MASK);
 	}
 
@@ -392,7 +392,7 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 void hdac_bus_stop(PFDO_CONTEXT fdoCtx) {
 	/* disable interrupts */
 	{
-		for (int i = 0; i < fdoCtx->numStreams; i++) {
+		for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
 			stream_update8(&fdoCtx->streams[i], SD_CTL, SD_INT_MASK, 0);
 		}
 
@@ -416,7 +416,7 @@ void hdac_bus_stop(PFDO_CONTEXT fdoCtx) {
 int hda_stream_interrupt(PFDO_CONTEXT fdoCtx, unsigned int status) {
 	int handled = 0;
 
-	for (int i = 0; i < fdoCtx->numStreams; i++) {
+	for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
 		PHDAC_STREAM stream = &fdoCtx->streams[i];
 		if (status & stream->int_sta_mask) {
 			UINT8 sd_status = stream_read8(stream, SD_STS);
@@ -488,10 +488,12 @@ void hda_dpc(
 	WDFINTERRUPT Interrupt,
 	WDFOBJECT AssociatedObject
 ) {
+	UNREFERENCED_PARAMETER(AssociatedObject);
+
 	WDFDEVICE Device = WdfInterruptGetDevice(Interrupt);
 	PFDO_CONTEXT fdoCtx = Fdo_GetContext(Device);
 
-	for (int i = 0; i < fdoCtx->numStreams; i++) {
+	for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
 		PHDAC_STREAM stream = &fdoCtx->streams[i];
 		if (stream->irqReceived) {
 			stream->irqReceived = FALSE;

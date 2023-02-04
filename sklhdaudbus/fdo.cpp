@@ -164,6 +164,8 @@ Fdo_EvtDevicePrepareHardware(
     _In_ WDFCMRESLIST ResourcesTranslated
 )
 {
+    UNREFERENCED_PARAMETER(ResourcesRaw);
+
     BOOLEAN fBar0Found = FALSE;
     BOOLEAN fBar4Found = FALSE;
     NTSTATUS status;
@@ -184,8 +186,6 @@ Fdo_EvtDevicePrepareHardware(
     for (ULONG i = 0; i < resourceCount; i++)
     {
         PCM_PARTIAL_RESOURCE_DESCRIPTOR pDescriptor;
-        UCHAR Class;
-        UCHAR Type;
 
         pDescriptor = WdfCmResourceListGetDescriptor(
             ResourcesTranslated, i);
@@ -357,8 +357,8 @@ Fdo_EvtDevicePrepareHardware(
 
     //Init Streams
     {
-        UINT32 i;
-        int streamTags[2] = { 0, 0 };
+        UINT8 i;
+        UINT8 streamTags[2] = { 0, 0 };
 
         for (i = 0; i < fdoCtx->numStreams; i++) {
             int dir = (i >= fdoCtx->captureIndexOff &&
@@ -368,7 +368,7 @@ Fdo_EvtDevicePrepareHardware(
              * valid values 1...15
              * use separate stream tag
              */
-            int tag = ++streamTags[dir];
+            UINT8 tag = ++streamTags[dir];
 
             {
                 PHDAC_STREAM stream = &fdoCtx->streams[i];
@@ -398,8 +398,6 @@ Fdo_EvtDevicePrepareHardware(
                     stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB;
                 }
 
-                PHYSICAL_ADDRESS maxAddr;
-                maxAddr.QuadPart = MAXULONG64;
                 stream->bdl = (UINT32 *)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
             }
 
@@ -478,7 +476,7 @@ Fdo_EvtDeviceReleaseHardware(
         MmFreeContiguousMemory(fdoCtx->rb);
 
     if (fdoCtx->streams) {
-        for (int i = 0; i < fdoCtx->numStreams; i++) {
+        for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
             PHDAC_STREAM stream = &fdoCtx->streams[i];
             if (stream->bdl) {
                 MmFreeContiguousMemory(stream->bdl);
@@ -503,6 +501,8 @@ Fdo_EvtDeviceD0Entry(
     _In_ WDF_POWER_DEVICE_STATE PreviousState
 )
 {
+    UNREFERENCED_PARAMETER(PreviousState);
+
     NTSTATUS status;
     PFDO_CONTEXT fdoCtx;
 
@@ -542,6 +542,8 @@ Fdo_EvtDeviceD0Exit(
     _In_ WDF_POWER_DEVICE_STATE TargetState
 )
 {
+    UNREFERENCED_PARAMETER(TargetState);
+
     NTSTATUS status;
     PFDO_CONTEXT fdoCtx;
 

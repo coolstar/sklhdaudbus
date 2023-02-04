@@ -82,7 +82,7 @@ NTSTATUS ADSPGetRenderStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFo
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
-	for (int i = 0; i < fdoContext->playbackStreams; i++) {
+	for (UINT32 i = 0; i < fdoContext->playbackStreams; i++) {
 		int tag = fdoContext->playbackIndexOff + i;
 		PHDAC_STREAM stream = &fdoContext->streams[tag];
 		if (stream->PdoContext != NULL) {
@@ -127,7 +127,7 @@ NTSTATUS ADSPGetCaptureStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamF
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
-	for (int i = 0; i < fdoContext->captureStreams; i++) {
+	for (UINT32 i = 0; i < fdoContext->captureStreams; i++) {
 		int tag = fdoContext->captureIndexOff + i;
 		PHDAC_STREAM stream = &fdoContext->streams[tag];
 		if (stream->PdoContext != NULL) {

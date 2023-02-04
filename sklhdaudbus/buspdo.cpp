@@ -164,6 +164,8 @@ Bus_CreatePdo(
     _In_ PPDO_IDENTIFICATION_DESCRIPTION           Desc
 )
 {
+    UNREFERENCED_PARAMETER(Device);
+
     NTSTATUS                    status;
     PPDO_DEVICE_DATA            pdoData = NULL;
     WDFDEVICE                   hChild = NULL;

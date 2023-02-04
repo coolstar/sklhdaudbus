@@ -92,7 +92,7 @@ typedef struct _FDO_CONTEXT
     UINT8* drsmcap;
 
     BOOLEAN is64BitOK;
-    UINT32 hwVersion;
+    UINT16 hwVersion;
 
     UINT32 captureIndexOff;
     UINT32 playbackIndexOff;
