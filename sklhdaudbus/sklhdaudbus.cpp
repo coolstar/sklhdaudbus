@@ -6,6 +6,7 @@ SklHdAudBusEvtDeviceAdd(
 	_Inout_ PWDFDEVICE_INIT DeviceInit
 )
 {
+	UNREFERENCED_PARAMETER(Driver);
 	NTSTATUS status;
 
 	//

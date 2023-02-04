@@ -231,7 +231,7 @@ NTSTATUS ADSPPrepareDSP(
 
 	stream->mdlBuf = NULL;
 	stream->bufSz = ByteSize;
-	stream->frags = frags;
+	stream->frags = (UINT16)frags;
 
 	hdac_stream_reset(stream);
 

@@ -25,7 +25,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
 		UINT32 response = 0;
 		//DbgPrint("Command: 0x%x\n", transfer->Output.Command);
-		status = hdac_bus_exec_verb(devData->FdoContext, devData->CodecIds.CodecAddress, transfer->Output.Command, &response);
+		status = hdac_bus_exec_verb(devData->FdoContext, (UINT16)devData->CodecIds.CodecAddress, transfer->Output.Command, &response);
 		transfer->Input.Response = response;
 		if (NT_SUCCESS(status)) {
 			transfer->Input.IsValid = 1;
@@ -51,6 +51,8 @@ NTSTATUS HDA_AllocateCaptureDmaEngine(
 	_Out_ PHANDLE Handle,
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
+	UNREFERENCED_PARAMETER(CodecAddress);
+
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -59,7 +61,7 @@ NTSTATUS HDA_AllocateCaptureDmaEngine(
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
-	for (int i = 0; i < fdoContext->captureStreams; i++) {
+	for (UINT32 i = 0; i < fdoContext->captureStreams; i++) {
 		int tag = fdoContext->captureIndexOff;
 		PHDAC_STREAM stream = &fdoContext->streams[tag];
 		if (stream->PdoContext != NULL) {
@@ -98,7 +100,7 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
-	for (int i = 0; i < fdoContext->playbackStreams; i++) {
+	for (UINT32 i = 0; i < fdoContext->playbackStreams; i++) {
 		int tag = fdoContext->playbackIndexOff;
 		PHDAC_STREAM stream = &fdoContext->streams[tag];
 		if (stream->PdoContext != NULL) {
@@ -129,6 +131,11 @@ NTSTATUS HDA_ChangeBandwidthAllocation(
 	_In_ PHDAUDIO_STREAM_FORMAT StreamFormat,
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
+	UNREFERENCED_PARAMETER(_context);
+	UNREFERENCED_PARAMETER(Handle);
+	UNREFERENCED_PARAMETER(StreamFormat);
+	UNREFERENCED_PARAMETER(ConverterFormat);
+
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
 
 	return STATUS_UNSUCCESSFUL;
@@ -172,7 +179,7 @@ NTSTATUS HDA_SetDmaEngineState(
 		return STATUS_NO_SUCH_DEVICE;
 	}
 
-	for (int i = 0; i < NumberOfHandles; i++) {
+	for (ULONG i = 0; i < NumberOfHandles; i++) {
 		PHDAC_STREAM stream = (PHDAC_STREAM)Handles[i];
 		if (stream->PdoContext != devData) {
 			return STATUS_INVALID_HANDLE;
@@ -249,7 +256,7 @@ NTSTATUS HDA_RegisterEventCallback(
 		WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	}
 
-	for (int i = 0; i < MAX_UNSOLICIT_CALLBACKS; i++) {
+	for (UINT8 i = 0; i < MAX_UNSOLICIT_CALLBACKS; i++) {
 		if (devData->unsolitCallbacks[i].inUse)
 			continue;
 
@@ -337,7 +344,7 @@ void HDA_GetResourceInformation(
 	
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (CodecAddress)
-		*CodecAddress = devData->CodecIds.CodecAddress;
+		*CodecAddress = (UINT8)devData->CodecIds.CodecAddress;
 	if (FunctionGroupStartNode)
 		*FunctionGroupStartNode = devData->CodecIds.FunctionGroupStartNode;
 }
@@ -380,13 +387,13 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	SIZE_T allocSize = RequestedBufferSize;
-	SIZE_T allocOffset = 0;
-	SIZE_T halfSize = 0;
+	UINT32 allocSize = (UINT32)RequestedBufferSize;
+	UINT32 allocOffset = 0;
+	UINT32 halfSize = 0;
 	if (NotificationCount == 2) {
-		halfSize = RequestedBufferSize / 2;
+		halfSize = (UINT32)RequestedBufferSize / 2;
 		allocOffset = PAGE_SIZE - (halfSize % PAGE_SIZE);
-		allocSize = RequestedBufferSize + allocOffset;
+		allocSize = (UINT32)RequestedBufferSize + allocOffset;
 	}
 
 	PMDL mdl = MmAllocatePagesForMdl(zeroAddr, maxAddr, zeroAddr, allocSize);
@@ -396,7 +403,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	stream->mdlBuf = mdl;
-	stream->bufSz = RequestedBufferSize;
+	stream->bufSz = (UINT32)RequestedBufferSize;
 
 	*BufferMdl = mdl;
 	*AllocatedBufferSize = RequestedBufferSize;
@@ -404,12 +411,12 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	*StreamId = stream->streamTag;
 
 	{
-		int frags = 0;
-		int pageNum = 0;
+		UINT16 frags = 0;
+		UINT16 pageNum = 0;
 
 		//Set up the BDL
 		UINT32* bdl = stream->bdl;
-		INT64 size = RequestedBufferSize;
+		UINT32 size = (UINT32)RequestedBufferSize;
 
 		PPFN_NUMBER pfnArray = MmGetMdlPfnArray(mdl);
 		UINT32 offset = allocOffset;

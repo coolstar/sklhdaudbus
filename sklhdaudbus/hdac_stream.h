@@ -1,4 +1,4 @@
-UINT hdac_format(PHDAC_STREAM stream);
+UINT16 hdac_format(PHDAC_STREAM stream);
 
 void hdac_stream_start(PHDAC_STREAM stream);
 void hdac_stream_stop(PHDAC_STREAM stream);

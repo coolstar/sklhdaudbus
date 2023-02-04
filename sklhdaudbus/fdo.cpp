@@ -560,7 +560,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
 
     fdoCtx->numCodecs = 0;
 #if ENABLE_HDA
-    for (int addr = 0; addr < HDA_MAX_CODECS; addr++) {
+    for (UINT8 addr = 0; addr < HDA_MAX_CODECS; addr++) {
         fdoCtx->codecs[addr] = NULL;
         if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
             continue;
@@ -582,13 +582,13 @@ Fdo_EvtDeviceSelfManagedIoInit(
 
         fdoCtx->numCodecs += 1;
 
-        UINT16 startID = (nodeCount >> 16) & 0x7FFF;
+        UINT8 startID = (nodeCount >> 16) & 0xFF;
         nodeCount = (nodeCount & 0x7FFF);
 
         UINT16 mainFuncGrp = 0;
         {
             UINT16 nid = startID;
-            for (int i = 0; i < nodeCount; i++, nid++) {
+            for (UINT32 i = 0; i < nodeCount; i++, nid++) {
                 UINT32 cmd = (addr << 28) | (nid << 20) |
                     (AC_VERB_PARAMETERS << 8) | AC_PAR_FUNCTION_TYPE;
                 if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmd, &funcType))) {

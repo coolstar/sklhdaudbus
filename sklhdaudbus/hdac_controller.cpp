@@ -8,7 +8,7 @@ NTSTATUS ResetHDAController(PFDO_CONTEXT fdoCtx, BOOLEAN wakeup) {
 	hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
 
 	//Stop all Streams DMA Engine
-	for (int i = 0; i < fdoCtx->numStreams; i++) {
+	for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
 		hdac_stream_stop(&fdoCtx->streams[i]);
 	}
 
@@ -119,7 +119,7 @@ void HDAInitCorb(PFDO_CONTEXT fdoCtx) {
 	hda_write16(fdoCtx, CORBWP, fdoCtx->corb.wp);
 	hda_write16(fdoCtx, CORBRP, HDA_CORBRP_RST);
 
-	udelay(10); //Delay for 10 ms to reset
+	udelay(10); //Delay for 10 us to reset
 
 	hda_write16(fdoCtx, CORBRP, 0);
 }
@@ -147,14 +147,14 @@ void HDAInitRirb(PFDO_CONTEXT fdoCtx) {
 }
 
 void HDAStartCorb(PFDO_CONTEXT fdoCtx) {
-	UINT32 corbCTL;
+	UINT8 corbCTL;
 	corbCTL = hda_read8(fdoCtx, CORBCTL);
 	corbCTL |= HDA_CORBCTL_RUN;
 	hda_write8(fdoCtx, CORBCTL, corbCTL);
 }
 
 void HDAStartRirb(PFDO_CONTEXT fdoCtx) {
-	UINT32 rirbCTL;
+	UINT8 rirbCTL;
 	rirbCTL = hda_read8(fdoCtx, RIRBCTL);
 	rirbCTL |= HDA_RBCTL_DMA_EN;
 	hda_write8(fdoCtx, RIRBCTL, rirbCTL);
@@ -315,12 +315,12 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 				res, res_ex, fdoCtx->rirb.rp, wp);
 		}
 		else if (res_ex & HDA_RIRB_EX_UNSOL_EV) {
-			UINT wp = (fdoCtx->unsol_wp + 1) % HDA_UNSOL_QUEUE_SIZE;
-			fdoCtx->unsol_wp = wp;
+			UINT unsol_wp = (fdoCtx->unsol_wp + 1) % HDA_UNSOL_QUEUE_SIZE;
+			fdoCtx->unsol_wp = unsol_wp;
 
-			wp <<= 1;
-			fdoCtx->unsol_queue[wp] = res;
-			fdoCtx->unsol_queue[wp + 1] = res_ex;
+			unsol_wp <<= 1;
+			fdoCtx->unsol_queue[unsol_wp] = res;
+			fdoCtx->unsol_queue[unsol_wp + 1] = res_ex;
 
 			fdoCtx->processUnsol = TRUE;
 		}
@@ -365,15 +365,17 @@ NTSTATUS hdac_bus_get_response(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32* res) {
 
 int hda_stream_interrupt(PFDO_CONTEXT fdoCtx, unsigned int status) {
 	int handled = 0;
+	UINT8 sd_status;
 
 	for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
 		PHDAC_STREAM stream = &fdoCtx->streams[i];
 		if (status & stream->int_sta_mask) {
-			UINT8 sd_status = stream_read8(stream, SD_STS);
+			sd_status = stream_read8(stream, SD_STS);
 			stream_write8(stream, SD_STS, SD_INT_MASK);
 			handled |= 1 << stream->idx;
 
-			stream->irqReceived = TRUE;
+			if (sd_status & SD_INT_COMPLETE)
+				stream->irqReceived = TRUE;
 		}
 	}
 	return handled;
@@ -387,14 +389,12 @@ BOOLEAN hda_interrupt(
 	WDFDEVICE Device = WdfInterruptGetDevice(Interrupt);
 	PFDO_CONTEXT fdoCtx = Fdo_GetContext(Device);
 
+	BOOLEAN active, handled = FALSE;
+
 	if (fdoCtx->dspInterruptCallback) {
-		BOOLEAN ret = fdoCtx->dspInterruptCallback(fdoCtx->dspInterruptContext);
-		if (ret) {
-			return ret;
-		}
+		handled = (BOOLEAN)fdoCtx->dspInterruptCallback(fdoCtx->dspInterruptContext);
 	}
 
-	BOOLEAN active, handled = FALSE;
 	int repeat = 0; //Avoid endless loop
 	do {
 		UINT32 status = hda_read32(fdoCtx, INTSTS);

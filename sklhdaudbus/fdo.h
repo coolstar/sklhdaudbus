@@ -15,7 +15,7 @@ typedef struct _PCI_BAR {
 
 #define HDA_UNSOL_QUEUE_SIZE	64
 #define MAX_NOTIF_EVENTS 16
-#define HDA_MAX_CODECS		8	/* limit by controller side */
+#define HDA_MAX_CODECS		16	/* limit by controller side */
 
 struct _FDO_CONTEXT;
 struct _PDO_DEVICE_DATA;
@@ -42,7 +42,7 @@ typedef struct _HDAC_STREAM {
     UINT32 bufSz;
     UINT32 periodBytes;
     UINT32 fifoSize;
-    int frags;
+    UINT16 frags;
 
     UINT8* sdAddr;
     UINT32 int_sta_mask;

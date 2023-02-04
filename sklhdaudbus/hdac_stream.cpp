@@ -8,7 +8,7 @@ void hdac_stream_start(PHDAC_STREAM stream) {
 
 	/* set stripe control */
 	if (stream->stripe) {
-		int stripe_ctl = 1;
+		UINT8 stripe_ctl = 1;
 		stream_update8(stream, SD_CTL_3B, SD_CTL_STRIPE_MASK,
 			stripe_ctl);
 	}
@@ -37,7 +37,8 @@ void hdac_stream_stop(PHDAC_STREAM stream) {
 void hdac_stream_reset(PHDAC_STREAM stream) {
 	hdac_stream_clear(stream);
 
-	int dma_run_state = stream_read8(stream, SD_CTL) & SD_CTL_DMA_START;
+	UINT8 dma_run_state;
+	dma_run_state = stream_read8(stream, SD_CTL) & SD_CTL_DMA_START;
 
 	stream_update8(stream, SD_CTL, 0, SD_CTL_STREAM_RESET);
 	udelay(3);
@@ -66,8 +67,8 @@ void hdac_stream_reset(PHDAC_STREAM stream) {
 		*stream->posbuf = 0;
 }
 
-UINT hdac_format(PHDAC_STREAM stream) {
-	UINT format = 0;
+UINT16 hdac_format(PHDAC_STREAM stream) {
+	UINT16 format = 0;
 
 	switch (stream->streamFormat.SampleRate) {
 	case 8000:
@@ -109,7 +110,7 @@ UINT hdac_format(PHDAC_STREAM stream) {
 	}
 
 	{
-		UINT channels = stream->streamFormat.NumberOfChannels;
+		UINT16 channels = stream->streamFormat.NumberOfChannels;
 		if (channels == 0 || channels > 8)
 			return 0;
 		format |= channels - 1;
@@ -151,7 +152,7 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 
 	/* program the stream format */
 	/* this value needs to be the same as the one programmed */
-	UINT format = hdac_format(stream);
+	UINT16 format = hdac_format(stream);
 	stream_write16(stream, SD_FORMAT, format);
 
 	/* program the stream LVI (last valid index) of the BDL */
