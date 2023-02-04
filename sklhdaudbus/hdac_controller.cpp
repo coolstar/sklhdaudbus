@@ -356,6 +356,9 @@ NTSTATUS hdac_bus_get_response(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32* res) {
 		KeQuerySystemTimePrecise(&CurrentTime);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
+			WdfInterruptAcquireLock(fdoCtx->Interrupt);
+			fdoCtx->rirb.cmds[addr]--;
+			WdfInterruptReleaseLock(fdoCtx->Interrupt);
 			return STATUS_IO_TIMEOUT;
 		}
 
