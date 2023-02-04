@@ -202,7 +202,7 @@ NTSTATUS ADSPPrepareDSP(
 	_In_ PVOID _context,
 	_In_ HANDLE Handle,
 	_In_ unsigned int ByteSize,
-	_In_ int frags,
+	_In_ int NumBlocks,
 	_Out_ PVOID* bdlBuf
 ) {
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
@@ -231,7 +231,7 @@ NTSTATUS ADSPPrepareDSP(
 
 	stream->mdlBuf = NULL;
 	stream->bufSz = ByteSize;
-	stream->frags = (UINT16)frags;
+	stream->numBlocks = (UINT16)NumBlocks;
 
 	hdac_stream_reset(stream);
 

@@ -27,6 +27,13 @@ typedef struct _HDAC_STREAM_CALLBACK {
     PVOID CallbackContext;
 } HDAC_STREAM_CALLBACK, *PHDAC_STREAM_CALLBACK;
 
+typedef struct _HDAC_BDLENTRY {
+    UINT32 lowAddr;
+    UINT32 highAddr;
+    UINT32 len;
+    UINT32 ioc;
+} HDAC_BDLENTRY, *PHDAC_BDLENTRY;
+
 typedef struct _HDAC_STREAM {
     struct _FDO_CONTEXT* FdoContext;
     struct _PDO_DEVICE_DATA* PdoContext;
@@ -34,7 +41,7 @@ typedef struct _HDAC_STREAM {
     PMDL mdlBuf;
     UINT32* posbuf;
 
-    UINT32* bdl;
+    HDAC_BDLENTRY* bdl;
 
     BOOLEAN stripe;
     int direction;
@@ -42,7 +49,7 @@ typedef struct _HDAC_STREAM {
     UINT32 bufSz;
     UINT32 periodBytes;
     UINT32 fifoSize;
-    UINT16 frags;
+    UINT16 numBlocks;
 
     UINT8* sdAddr;
     UINT32 int_sta_mask;

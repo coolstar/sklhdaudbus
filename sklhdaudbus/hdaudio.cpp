@@ -411,19 +411,19 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	*StreamId = stream->streamTag;
 
 	{
-		UINT16 frags = 0;
+		UINT16 numBlocks = 0;
 		UINT16 pageNum = 0;
 
 		//Set up the BDL
-		UINT32* bdl = stream->bdl;
+		PHDAC_BDLENTRY bdl = stream->bdl;
 		UINT32 size = (UINT32)RequestedBufferSize;
 
 		PPFN_NUMBER pfnArray = MmGetMdlPfnArray(mdl);
 		UINT32 offset = allocOffset;
 		while (halfSize > 0) {
-			if (frags > HDA_MAX_BDL_ENTRIES) {
+			if (numBlocks > HDA_MAX_BDL_ENTRIES) {
 				DbgPrint("Too many BDL entries!\n");
-				frags = HDA_MAX_BDL_ENTRIES;
+				numBlocks = HDA_MAX_BDL_ENTRIES;
 				break;
 			}
 
@@ -435,28 +435,27 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 			PFN_NUMBER pfn = pfnArray[pageNum];
 			PHYSICAL_ADDRESS addr = { 0 };
 			addr.QuadPart = pfn << PAGE_SHIFT;
-			/* program the address field of the BDL entry */
-			bdl[0] = addr.LowPart + pageOff;
-			bdl[1] = addr.HighPart;
-			/* program the size field of the BDL entry */
-			bdl[2] = chunk;
-			/* program the IOC to enable interrupt
-			 * only when the whole fragment is processed
-			 */
+
+			bdl->lowAddr = addr.LowPart + pageOff;
+			bdl->highAddr = addr.HighPart;
+			bdl->len = chunk;
+
 			halfSize -= chunk;
 			size -= chunk;
-			bdl[3] = (halfSize > 0) ? 0 : 1;
-			bdl += 4;
-			frags++;
+
+			//Program interrupt for when buffer is halfway
+			bdl->ioc = (halfSize > 0) ? 0 : 1;
+			bdl++;
+			numBlocks++;
 			offset += chunk;
 			if ((offset % PAGE_SIZE) == 0)
-				pageNum++;
+				pageNum++; //Only increment page num if we go past page boundary
 		}
 
 		while (size > 0) {
-			if (frags > HDA_MAX_BDL_ENTRIES) {
+			if (numBlocks > HDA_MAX_BDL_ENTRIES) {
 				DbgPrint("Too many BDL entries!\n");
-				frags = HDA_MAX_BDL_ENTRIES;
+				numBlocks = HDA_MAX_BDL_ENTRIES;
 				break;
 			}
 
@@ -468,23 +467,20 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 			PFN_NUMBER pfn = pfnArray[pageNum];
 			PHYSICAL_ADDRESS addr = { 0 };
 			addr.QuadPart = pfn << PAGE_SHIFT;
-			/* program the address field of the BDL entry */
-			bdl[0] = addr.LowPart + pageOff;
-			bdl[1] = addr.HighPart;
-			/* program the size field of the BDL entry */
-			bdl[2] = chunk;
-			/* program the IOC to enable interrupt
-			 * only when the whole fragment is processed
-			 */
+			bdl->lowAddr = addr.LowPart + pageOff;
+			bdl->highAddr = addr.HighPart;
+			bdl->len = chunk;
+
 			size -= chunk;
-			bdl[3] = (size > 0) ? 0 : 1;
-			bdl += 4;
-			frags++;
+			//Program interrupt for when buffer ends
+			bdl->ioc = (size > 0) ? 0 : 1;
+			bdl++;
+			numBlocks++;
 			offset += chunk;
 			if ((offset % PAGE_SIZE) == 0)
-				pageNum++;
+				pageNum++; //Only increment page num if we go past page boundary
 		}
-		stream->frags = frags;
+		stream->numBlocks = numBlocks;
 	}
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);

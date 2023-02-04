@@ -385,7 +385,7 @@ Fdo_EvtDevicePrepareHardware(
                     stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB;
                 }
 
-                stream->bdl = (UINT32 *)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
+                stream->bdl = (PHDAC_BDLENTRY)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);
             }
 
             SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,

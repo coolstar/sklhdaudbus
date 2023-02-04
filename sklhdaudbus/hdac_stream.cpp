@@ -156,7 +156,7 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	stream_write16(stream, SD_FORMAT, format);
 
 	/* program the stream LVI (last valid index) of the BDL */
-	stream_write16(stream, SD_LVI, stream->frags - 1);
+	stream_write16(stream, SD_LVI, stream->numBlocks - 1);
 
 	/* program the BDL address */
 	/* lower BDL address */
