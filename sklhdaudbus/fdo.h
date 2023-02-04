@@ -124,7 +124,7 @@ typedef struct _FDO_CONTEXT
     unsigned int last_cmd[HDA_MAX_CODECS];
     WDFWAITLOCK cmdLock;
 
-    PVOID rb; //CORB and RIRB buffers
+    UINT8 *rb; //CORB and RIRB buffers
     PVOID posbuf;
 } FDO_CONTEXT, * PFDO_CONTEXT;
 

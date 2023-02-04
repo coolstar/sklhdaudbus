@@ -1,8 +1,13 @@
 #if !defined(_HDA_CONTROLLER_H_)
 #define _HDA_CONTROLLER_H_
 
+//New
+NTSTATUS GetHDACapabilities(PFDO_CONTEXT fdoCtx);
+NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx);
+NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx);
+
+//Old
 NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx);
-void hdac_bus_stop(PFDO_CONTEXT fdoCtx);
 BOOLEAN hda_interrupt(WDFINTERRUPT Interrupt, ULONG MessageID);
 void hda_dpc(WDFINTERRUPT Interrupt, WDFOBJECT AssociatedObject);
 NTSTATUS hdac_bus_send_cmd(PFDO_CONTEXT fdoCtx, unsigned int val);

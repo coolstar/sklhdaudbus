@@ -1,5 +1,207 @@
 #include "driver.h"
 
+//New
+NTSTATUS ResetHDAController(PFDO_CONTEXT fdoCtx, BOOLEAN wakeup) {
+	UINT32 gctl;
+
+	//Clear STATESTS
+	hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
+
+	//Stop all Streams DMA Engine
+	for (int i = 0; i < fdoCtx->numStreams; i++) {
+		hdac_stream_stop(&fdoCtx->streams[i]);
+	}
+
+	//Stop CORB and RIRB
+	hda_write8(fdoCtx, CORBCTL, 0);
+	hda_write8(fdoCtx, RIRBCTL, 0);
+
+	//Reset DMA position buffer
+	hda_write32(fdoCtx, DPLBASE, 0);
+	hda_write32(fdoCtx, DPUBASE, 0);
+
+	//Reset the controller for at least 100 us
+	gctl = hda_read32(fdoCtx, GCTL);
+	hda_write32(fdoCtx, GCTL, gctl & ~HDA_GCTL_RESET);
+
+	for (int count = 0; count < 1000; count++) {
+		gctl = hda_read32(fdoCtx, GCTL);
+		if (!(gctl & HDA_GCTL_RESET)) {
+			break;
+		}
+		udelay(10);
+	}
+
+	if (gctl & HDA_GCTL_RESET) {
+		DbgPrint("Error: unable to put controller in reset\n");
+		return STATUS_DEVICE_POWER_FAILURE;
+	}
+
+	//If wakeup not requested, leave in reset state
+	if (!wakeup)
+		return STATUS_SUCCESS;
+
+	udelay(100);
+	gctl = hda_read32(fdoCtx, GCTL);
+	hda_write32(fdoCtx, GCTL, gctl | HDA_GCTL_RESET);
+
+	for (int count = 0; count < 1000; count++) {
+		gctl = hda_read32(fdoCtx, GCTL);
+		if (gctl & HDA_GCTL_RESET) {
+			break;
+		}
+		udelay(10);
+	}
+	if (!(gctl & HDA_GCTL_RESET)) {
+		DbgPrint("Error: controller stuck in reset\n");
+		return STATUS_DEVICE_POWER_FAILURE;
+	}
+
+	//Wait for codecs to finish their own reset sequence. Delay from VoodooHDA so it resets properly
+	udelay(1000);
+
+	if (!fdoCtx->codecMask) {
+		fdoCtx->codecMask = hda_read16(fdoCtx, STATESTS);
+		SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+			"codec mask = 0x%lx\n", fdoCtx->codecMask);
+	}
+
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS GetHDACapabilities(PFDO_CONTEXT fdoCtx) {
+	UINT16 gcap = hda_read16(fdoCtx, GCAP);
+	SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+		"chipset global capabilities = 0x%x\n", gcap);
+
+	fdoCtx->is64BitOK = (gcap & 0x1);
+	if (!fdoCtx->is64BitOK) {
+		return STATUS_DEVICE_PROTOCOL_ERROR; //64 bit required
+	}
+
+	fdoCtx->hwVersion = (hda_read8(fdoCtx, VMAJ) << 8) | hda_read8(fdoCtx, VMIN);
+
+	fdoCtx->captureStreams = (gcap >> 8) & 0x0f;
+	fdoCtx->playbackStreams = (gcap >> 12) & 0x0f;
+
+	SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+		"streams (cap %d, playback %d)\n", fdoCtx->captureStreams, fdoCtx->playbackStreams);
+
+	fdoCtx->captureIndexOff = 0;
+	fdoCtx->playbackIndexOff = fdoCtx->captureStreams;
+	fdoCtx->numStreams = fdoCtx->captureStreams + fdoCtx->playbackStreams;
+
+	UINT8 corbSize = hda_read8(fdoCtx, CORBSIZE);
+	if (!(corbSize & 0x40)) {
+		return STATUS_DEVICE_FEATURE_NOT_SUPPORTED; //CORB must support 256
+	}
+
+	UINT8 rirbSize = hda_read8(fdoCtx, RIRBSIZE);
+	if (!(rirbSize & 0x40)) {
+		return STATUS_DEVICE_FEATURE_NOT_SUPPORTED; //RIRB must support 256
+	}
+
+	return STATUS_SUCCESS;
+}
+
+void HDAInitCorb(PFDO_CONTEXT fdoCtx) {
+	//Setup CORB address
+	fdoCtx->corb.buf = (UINT32*)fdoCtx->rb;
+	fdoCtx->corb.addr = MmGetPhysicalAddress(fdoCtx->corb.buf);
+	hda_write32(fdoCtx, CORBLBASE, fdoCtx->corb.addr.LowPart);
+	hda_write32(fdoCtx, CORBUBASE, fdoCtx->corb.addr.HighPart);
+
+	//Set the corb size to 256 entries
+	hda_write8(fdoCtx, CORBSIZE, 0x02);
+
+	//Set WP and RP
+	fdoCtx->corb.wp = 0;
+	hda_write16(fdoCtx, CORBWP, fdoCtx->corb.wp);
+	hda_write16(fdoCtx, CORBRP, HDA_CORBRP_RST);
+
+	udelay(10); //Delay for 10 ms to reset
+
+	hda_write16(fdoCtx, CORBRP, 0);
+}
+
+void HDAInitRirb(PFDO_CONTEXT fdoCtx) {
+	//Setup CORB address
+	fdoCtx->rirb.buf = (UINT32*)(fdoCtx->rb + PAGE_SIZE);
+	fdoCtx->rirb.addr = MmGetPhysicalAddress(fdoCtx->rirb.buf);
+	hda_write32(fdoCtx, RIRBLBASE, fdoCtx->rirb.addr.LowPart);
+	hda_write32(fdoCtx, RIRBUBASE, fdoCtx->rirb.addr.HighPart);
+
+	//Set the rirb size to 256 entries
+	hda_write8(fdoCtx, RIRBSIZE, 0x02);
+
+	//Set WP and RP
+	fdoCtx->rirb.rp = 0;
+	hda_write16(fdoCtx, RIRBWP, HDA_RIRBWP_RST);
+
+	//Set interrupt threshold
+	hda_write16(fdoCtx, RINTCNT, 1);
+
+	//Enable Received response reporting
+	hda_write8(fdoCtx, RIRBCTL, HDA_RBCTL_IRQ_EN);
+}
+
+void HDAStartCorb(PFDO_CONTEXT fdoCtx) {
+	UINT32 corbCTL;
+	corbCTL = hda_read8(fdoCtx, CORBCTL);
+	corbCTL |= HDA_CORBCTL_RUN;
+	hda_write8(fdoCtx, CORBCTL, corbCTL);
+}
+
+void HDAStartRirb(PFDO_CONTEXT fdoCtx) {
+	UINT32 rirbCTL;
+	rirbCTL = hda_read8(fdoCtx, RIRBCTL);
+	rirbCTL |= HDA_RBCTL_DMA_EN;
+	hda_write8(fdoCtx, RIRBCTL, rirbCTL);
+}
+
+NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx) {
+	NTSTATUS status;
+	WdfInterruptAcquireLock(fdoCtx->Interrupt);
+
+	status = ResetHDAController(fdoCtx, TRUE);
+	if (!NT_SUCCESS(status)) {
+		goto exit;
+	}
+
+	HDAInitCorb(fdoCtx);
+	HDAInitRirb(fdoCtx);
+
+	HDAStartCorb(fdoCtx);
+	HDAStartRirb(fdoCtx);
+
+	//Enabling Controller Interrupt
+	hda_write32(fdoCtx, GCTL, hda_read32(fdoCtx, GCTL) | HDA_GCTL_UNSOL);
+	hda_write32(fdoCtx, INTCTL, hda_read32(fdoCtx, INTCTL) | HDA_INT_CTRL_EN | HDA_INT_GLOBAL_EN);
+
+	//Program position buffer
+	PHYSICAL_ADDRESS posbufAddr = MmGetPhysicalAddress(fdoCtx->posbuf);
+	hda_write32(fdoCtx, DPLBASE, posbufAddr.LowPart);
+	hda_write32(fdoCtx, DPUBASE, posbufAddr.HighPart);
+
+	udelay(1000);
+
+exit:
+	WdfInterruptReleaseLock(fdoCtx->Interrupt);
+	return status;
+}
+
+NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx) {
+	WdfInterruptAcquireLock(fdoCtx->Interrupt);
+
+	NTSTATUS status = ResetHDAController(fdoCtx, FALSE);
+
+	WdfInterruptReleaseLock(fdoCtx->Interrupt);
+
+	return status;
+}
+
+//Old
+
 static void hda_clear_corbrp(PFDO_CONTEXT fdoCtx) {
 	//Clear the CORB read pointer
 	int timeout;
@@ -94,22 +296,6 @@ static void hdac_wait_for_cmd_dmas(PFDO_CONTEXT fdoCtx) {
 		}
 		udelay(500);
 	}
-}
-
-void hdac_bus_stop_cmd_io(PFDO_CONTEXT fdoCtx) {
-	WdfInterruptAcquireLock(fdoCtx->Interrupt);
-	//disable ringbuffer DMAs
-	hda_write8(fdoCtx, RIRBCTL, 0);
-	hda_write8(fdoCtx, CORBCTL, 0);
-
-	WdfInterruptReleaseLock(fdoCtx->Interrupt);
-
-	hdac_wait_for_cmd_dmas(fdoCtx);
-
-	WdfInterruptAcquireLock(fdoCtx->Interrupt);
-	//disable unsolicited responses
-	hda_update32(fdoCtx, GCTL, HDA_GCTL_UNSOL, 0);
-	WdfInterruptReleaseLock(fdoCtx->Interrupt);
 }
 
 static UINT16 hda_command_addr(UINT32 cmd) {
@@ -311,43 +497,6 @@ void hdac_bus_exit_link_reset(PFDO_CONTEXT fdoCtx) {
 	}
 }
 
-NTSTATUS hdac_bus_reset_link(PFDO_CONTEXT fdoCtx) {
-    /* clear STATESTS if not in reset */
-
-    if (hda_read8(fdoCtx, GCTL) & HDA_GCTL_RESET)
-        hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
-
-	// Reset Controller
-	hdac_bus_enter_link_reset(fdoCtx);
-
-	/* delay for >= 100us for codec PLL to settle per spec
-	 * Rev 0.9 section 5.5.1
-	 */
-	udelay(1000);
-
-	// Bring Controller out of reset
-
-	hdac_bus_exit_link_reset(fdoCtx);
-
-	// Wait >= 540us for codecs to initialize
-
-	udelay(1000);
-
-	// Check if controller is ready
-	if (!hda_read8(fdoCtx, GCTL)) {
-		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT,
-			"Controller not ready!\n");
-		return STATUS_DEVICE_POWER_FAILURE;
-	}
-
-	if (!fdoCtx->codecMask) {
-		fdoCtx->codecMask = hda_read16(fdoCtx, STATESTS);
-		SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-			"codec mask = 0x%lx\n", fdoCtx->codecMask);
-	}
-	return STATUS_SUCCESS;
-}
-
 void hda_int_clear(PFDO_CONTEXT fdoCtx) {
 	//Clear stream status
 	for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
@@ -367,7 +516,7 @@ void hda_int_clear(PFDO_CONTEXT fdoCtx) {
 NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 	NTSTATUS status;
 	
-	status = hdac_bus_reset_link(fdoCtx);
+	status = ResetHDAController(fdoCtx, TRUE);
 	if (!NT_SUCCESS(status)) {
 		return status;
 	}
@@ -387,30 +536,6 @@ NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
 	hda_write32(fdoCtx, DPUBASE, posbufAddr.HighPart);
 
 	return STATUS_SUCCESS;
-}
-
-void hdac_bus_stop(PFDO_CONTEXT fdoCtx) {
-	/* disable interrupts */
-	{
-		for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
-			stream_update8(&fdoCtx->streams[i], SD_CTL, SD_INT_MASK, 0);
-		}
-
-		/* disable SIE for all streams & disable controller CIE and GIE */
-		hda_write32(fdoCtx, INTCTL, 0);
-	}
-
-	//Clear Interrupts
-	hda_int_clear(fdoCtx);
-
-	/* disable CORB/RIRB */
-	hdac_bus_stop_cmd_io(fdoCtx);
-
-	/* disable position buffer */
-	if (fdoCtx->posbuf) {
-		hda_write32(fdoCtx, DPLBASE, 0);
-		hda_write32(fdoCtx, DPUBASE, 0);
-	}
 }
 
 int hda_stream_interrupt(PFDO_CONTEXT fdoCtx, unsigned int status) {

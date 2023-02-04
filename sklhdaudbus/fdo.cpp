@@ -312,32 +312,19 @@ Fdo_EvtDevicePrepareHardware(
         } while (offset);
     }
 
-    UINT16 gcap = hda_read16(fdoCtx, GCAP);
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "chipset global capabilities = 0x%x\n", gcap);
-
-    fdoCtx->is64BitOK = (gcap & 0x1);
-    if (!fdoCtx->is64BitOK) {
-        return STATUS_DEVICE_PROTOCOL_ERROR; //64 bit required
+    status = GetHDACapabilities(fdoCtx);
+    if (!NT_SUCCESS(status)) {
+        return status;
     }
-
-    fdoCtx->hwVersion = (hda_read8(fdoCtx, VMAJ) << 8) | hda_read8(fdoCtx, VMIN);
-
-    fdoCtx->captureStreams = (gcap >> 8) & 0x0f;
-    fdoCtx->playbackStreams = (gcap >> 12) & 0x0f;
-
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "streams (cap %d, playback %d)\n", fdoCtx->captureStreams, fdoCtx->playbackStreams);
-
-    fdoCtx->captureIndexOff = 0;
-    fdoCtx->playbackIndexOff = fdoCtx->captureStreams;
-    fdoCtx->numStreams = fdoCtx->captureStreams + fdoCtx->playbackStreams;
 
     fdoCtx->streams = (PHDAC_STREAM)ExAllocatePoolZero(NonPagedPool, sizeof(HDAC_STREAM) * fdoCtx->numStreams, SKLHDAUDBUS_POOL_TAG);
     if (!fdoCtx->streams) {
         return STATUS_NO_MEMORY;
     }
     RtlZeroMemory(fdoCtx->streams, sizeof(HDAC_STREAM) * fdoCtx->numStreams);
+
+    PHYSICAL_ADDRESS zeroAddr;
+    zeroAddr.QuadPart = 0;
 
     PHYSICAL_ADDRESS maxAddr;
     maxAddr.QuadPart = MAXULONG64;
@@ -348,12 +335,12 @@ Fdo_EvtDevicePrepareHardware(
         return STATUS_NO_MEMORY;
     }
 
-    fdoCtx->rb = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
-    RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
-
+    fdoCtx->rb = (UINT8 *)MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
     if (!fdoCtx->rb) {
         return STATUS_NO_MEMORY;
     }
+
+    RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
 
     //Init Streams
     {
@@ -520,6 +507,7 @@ Fdo_EvtDeviceD0Entry(
         pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
     }
 
+    //status = StartHDAController(fdoCtx);
     hdac_bus_init(fdoCtx);
 
     if (fdoCtx->venId == VEN_INTEL) {
@@ -549,12 +537,10 @@ Fdo_EvtDeviceD0Exit(
 
     fdoCtx = Fdo_GetContext(Device);
 
-    hdac_bus_stop(fdoCtx);
+    status = StopHDAController(fdoCtx);
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
-
-    status = STATUS_SUCCESS;
 
     return status;
 }
