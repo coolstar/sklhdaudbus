@@ -216,6 +216,7 @@ VOID HDA_GetWallClockRegister(
 ) {
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
+		*Wallclock = NULL;
 		return;
 	}
 	*Wallclock = (ULONG *)((devData->FdoContext)->m_BAR0.Base.baseptr + HDA_REG_WALLCLK);
@@ -551,7 +552,17 @@ NTSTATUS HDA_FreeDmaBuffer(
 	_In_ PVOID _context,
 	_In_ HANDLE Handle
 ) {
-	return HDA_FreeDmaBufferWithNotification(_context, Handle, NULL, 0);
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	return HDA_FreeDmaBufferWithNotification(_context, Handle, stream->mdlBuf, stream->bufSz);
 }
 
 NTSTATUS HDA_RegisterNotificationEvent(
