@@ -570,8 +570,10 @@ Fdo_EvtDeviceSelfManagedIoInit(
         UINT32 cmdTmpl = (addr << 28) | (AC_NODE_ROOT << 20) |
             (AC_VERB_PARAMETERS << 8);
         UINT32 funcType = 0, vendorDevice, subsysId, revId, nodeCount;
-        if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) {
-            continue;
+        if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) { //Intel Kaby Lake may fail to enumerate on the first boot. Retry once before skipping
+            if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) {
+                continue;
+            }
         }
         if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_REV_ID, &revId))) {
             continue;
