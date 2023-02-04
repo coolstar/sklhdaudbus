@@ -507,8 +507,7 @@ Fdo_EvtDeviceD0Entry(
         pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
     }
 
-    //status = StartHDAController(fdoCtx);
-    hdac_bus_init(fdoCtx);
+    status = StartHDAController(fdoCtx);
 
     if (fdoCtx->venId == VEN_INTEL) {
         UINT32 val;

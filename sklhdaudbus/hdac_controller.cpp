@@ -126,8 +126,9 @@ void HDAInitCorb(PFDO_CONTEXT fdoCtx) {
 
 void HDAInitRirb(PFDO_CONTEXT fdoCtx) {
 	//Setup CORB address
-	fdoCtx->rirb.buf = (UINT32*)(fdoCtx->rb + PAGE_SIZE);
+	fdoCtx->rirb.buf = (UINT32*)(fdoCtx->rb + 0x800);
 	fdoCtx->rirb.addr = MmGetPhysicalAddress(fdoCtx->rirb.buf);
+	RtlZeroMemory(fdoCtx->rirb.cmds, sizeof(fdoCtx->rirb.cmds));
 	hda_write32(fdoCtx, RIRBLBASE, fdoCtx->rirb.addr.LowPart);
 	hda_write32(fdoCtx, RIRBUBASE, fdoCtx->rirb.addr.HighPart);
 
@@ -168,6 +169,9 @@ NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx) {
 		goto exit;
 	}
 
+	//Clear STATESTS
+	hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
+
 	HDAInitCorb(fdoCtx);
 	HDAInitRirb(fdoCtx);
 
@@ -201,103 +205,6 @@ NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx) {
 }
 
 //Old
-
-static void hda_clear_corbrp(PFDO_CONTEXT fdoCtx) {
-	//Clear the CORB read pointer
-	int timeout;
-
-	if (fdoCtx->venId != VEN_VMWARE) {
-		for (timeout = 1000; timeout > 0; timeout--) {
-			if (hda_read16(fdoCtx, CORBRP) & HDA_CORBRP_RST)
-				break;
-			udelay(1);
-		}
-		if (timeout <= 0) {
-			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT,
-				"CORB reset timeout#1, CORBRP = %d\n", hda_read16(fdoCtx, CORBRP));
-		}
-	}
-
-	hda_write16(fdoCtx, CORBRP, 0);
-	for (timeout = 1000; timeout > 0; timeout--) {
-		if (hda_read16(fdoCtx, CORBRP) == 0)
-			break;
-		udelay(1);
-	}
-	if (timeout <= 0) {
-		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT,
-			"CORB reset timeout#2, CORBRP = %d\n", hda_read16(fdoCtx, CORBRP));
-	}
-}
-
-void hdac_bus_init_cmd_io(PFDO_CONTEXT fdoCtx) {
-	//CORB Set up
-	WdfInterruptAcquireLock(fdoCtx->Interrupt);
-	fdoCtx->corb.buf = (UINT32 *)fdoCtx->rb;
-	fdoCtx->corb.addr = MmGetPhysicalAddress(fdoCtx->corb.buf);
-	hda_write32(fdoCtx, CORBLBASE, fdoCtx->corb.addr.LowPart);
-	hda_write32(fdoCtx, CORBUBASE, fdoCtx->corb.addr.HighPart);
-
-	//Set the corb size to 256 entries
-	hda_write8(fdoCtx, CORBSIZE, 0x02);
-	//Set the corb write pointer to 0
-	hda_write16(fdoCtx, CORBWP, 0);
-
-	//Reset the corb hw read pointer
-	hda_write16(fdoCtx, CORBRP, HDA_CORBRP_RST);
-
-	hda_clear_corbrp(fdoCtx);
-
-	//Enable corb dma
-	hda_write8(fdoCtx, CORBCTL, HDA_CORBCTL_RUN);
-
-	fdoCtx->rirb.buf = (UINT32 *)((UINT8*)fdoCtx->rb + 0x800);
-	fdoCtx->rirb.addr = MmGetPhysicalAddress(fdoCtx->rirb.buf);
-	RtlZeroMemory(fdoCtx->rirb.cmds, sizeof(fdoCtx->rirb.cmds));
-	hda_write32(fdoCtx, RIRBLBASE, fdoCtx->rirb.addr.LowPart);
-	hda_write32(fdoCtx, RIRBUBASE, fdoCtx->rirb.addr.HighPart);
-
-	//Set the rirb size to 256 entries
-	hda_write8(fdoCtx, RIRBSIZE, 0x02);
-	//Reset the rirb hw write pointer
-	hda_write16(fdoCtx, RIRBWP, HDA_RIRBWP_RST);
-	//set N=1, get RIRB response interrupt for new entry
-	hda_write16(fdoCtx, RINTCNT, 1);
-	//enable rirb dma and response irq
-	hda_write8(fdoCtx, RIRBCTL, HDA_RBCTL_DMA_EN | HDA_RBCTL_IRQ_EN);
-	//Accept unsolicited responses
-	hda_update32(fdoCtx, GCTL, HDA_GCTL_UNSOL, HDA_GCTL_UNSOL);
-	WdfInterruptReleaseLock(fdoCtx->Interrupt);
-}
-
-static void hdac_wait_for_cmd_dmas(PFDO_CONTEXT fdoCtx) {
-	LARGE_INTEGER StartTime;
-	KeQuerySystemTimePrecise(&StartTime);
-
-	int timeout_ms = 100;
-
-	while (hda_read8(fdoCtx, RIRBCTL) & HDA_RBCTL_DMA_EN) {
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTimePrecise(&CurrentTime);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			break;
-		}
-		udelay(500);
-	}
-
-	KeQuerySystemTimePrecise(&StartTime);
-	while (hda_read8(fdoCtx, CORBCTL) & HDA_CORBCTL_RUN) {
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTimePrecise(&CurrentTime);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			break;
-		}
-		udelay(500);
-	}
-}
-
 static UINT16 hda_command_addr(UINT32 cmd) {
 	UINT16 addr = cmd >> 28;
 	if (addr >= HDA_MAX_CODECS) {
@@ -454,88 +361,6 @@ NTSTATUS hdac_bus_get_response(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32* res) {
 
 		udelay(100);
 	}
-}
-
-void hdac_bus_enter_link_reset(PFDO_CONTEXT fdoCtx) {
-    //Reset controller
-    hda_update32(fdoCtx, GCTL, HDA_GCTL_RESET, 0);
-
-	LARGE_INTEGER StartTime;
-	KeQuerySystemTimePrecise(&StartTime);
-
-	int timeout_ms = 100;
-
-	while (hda_read32(fdoCtx, GCTL) & HDA_GCTL_RESET) {
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTimePrecise(&CurrentTime);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Enter link reset timeout\n");
-			return;
-		}
-		udelay(500);
-	}
-}
-
-void hdac_bus_exit_link_reset(PFDO_CONTEXT fdoCtx) {
-	hda_update8(fdoCtx, GCTL, HDA_GCTL_RESET, HDA_GCTL_RESET);
-
-	LARGE_INTEGER StartTime;
-	KeQuerySystemTimePrecise(&StartTime);
-
-	int timeout_ms = 100;
-
-	while (!hda_read8(fdoCtx, GCTL)) {
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTimePrecise(&CurrentTime);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_INIT, "Exit link reset timeout\n");
-			return;
-		}
-		udelay(500);
-	}
-}
-
-void hda_int_clear(PFDO_CONTEXT fdoCtx) {
-	//Clear stream status
-	for (UINT32 i = 0; i < fdoCtx->numStreams; i++) {
-		stream_write8(&fdoCtx->streams[i], SD_STS, SD_INT_MASK);
-	}
-
-	//Clear STATESTS
-	hda_write16(fdoCtx, STATESTS, STATESTS_INT_MASK);
-
-	//Clear rirb status
-	hda_write8(fdoCtx, RIRBSTS, RIRB_INT_MASK);
-
-	//Clear int status
-	hda_write32(fdoCtx, INTSTS, HDA_INT_CTRL_EN | HDA_INT_ALL_STREAM);
-}
-
-NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx) {
-	NTSTATUS status;
-	
-	status = ResetHDAController(fdoCtx, TRUE);
-	if (!NT_SUCCESS(status)) {
-		return status;
-	}
-
-	//Clear Interrupts
-	hda_int_clear(fdoCtx);
-
-	hdac_bus_init_cmd_io(fdoCtx);
-
-	//Enable interrupts
-	hda_update32(fdoCtx, INTCTL, HDA_INT_CTRL_EN | HDA_INT_GLOBAL_EN,
-		HDA_INT_CTRL_EN | HDA_INT_GLOBAL_EN);
-
-	//Program the position buffer
-	PHYSICAL_ADDRESS posbufAddr = MmGetPhysicalAddress(fdoCtx->posbuf);
-	hda_write32(fdoCtx, DPLBASE, posbufAddr.LowPart);
-	hda_write32(fdoCtx, DPUBASE, posbufAddr.HighPart);
-
-	return STATUS_SUCCESS;
 }
 
 int hda_stream_interrupt(PFDO_CONTEXT fdoCtx, unsigned int status) {

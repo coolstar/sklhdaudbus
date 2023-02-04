@@ -7,7 +7,6 @@ NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx);
 NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx);
 
 //Old
-NTSTATUS hdac_bus_init(PFDO_CONTEXT fdoCtx);
 BOOLEAN hda_interrupt(WDFINTERRUPT Interrupt, ULONG MessageID);
 void hda_dpc(WDFINTERRUPT Interrupt, WDFOBJECT AssociatedObject);
 NTSTATUS hdac_bus_send_cmd(PFDO_CONTEXT fdoCtx, unsigned int val);
