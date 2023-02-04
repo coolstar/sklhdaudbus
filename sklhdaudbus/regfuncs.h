@@ -1,27 +1,27 @@
-static UINT8 read8(PVOID addr) {
+static inline UINT8 read8(PVOID addr) {
 	UINT8 ret = *(UINT8*)addr;
 	return ret;
 }
 
-static void write8(PVOID addr, UINT8 data) {
+static inline void write8(PVOID addr, UINT8 data) {
 	*(UINT8*)addr = data;
 }
 
-static UINT16 read16(PVOID addr) {
+static inline UINT16 read16(PVOID addr) {
 	UINT16 ret = *(UINT16*)addr;
 	return ret;
 }
 
-static void write16(PVOID addr, UINT16 data) {
+static inline void write16(PVOID addr, UINT16 data) {
 	*(UINT16*)addr = data;
 }
 
-static UINT32 read32(PVOID addr) {
+static inline UINT32 read32(PVOID addr) {
 	UINT32 ret = *(UINT32*)addr;
 	return ret;
 }
 
-static void write32(PVOID addr, UINT32 data) {
+static inline void write32(PVOID addr, UINT32 data) {
 	*(UINT32*)addr = data;
 }
 
