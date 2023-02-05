@@ -58,7 +58,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
 
-	if (Callback) {
+	if (Callback) { //TODO: Do this async
 		DbgPrint("Got Callback\n");
 		Callback(CodecTransfer, Context);
 	}
