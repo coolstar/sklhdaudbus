@@ -5,7 +5,7 @@
 NTSTATUS GetHDACapabilities(PFDO_CONTEXT fdoCtx);
 NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx);
 NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx);
-
+NTSTATUS SendHDACmds(PFDO_CONTEXT fdoCtx, ULONG count, PHDAUDIO_CODEC_TRANSFER CodecTransfer);
 NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res);
 
 //Old

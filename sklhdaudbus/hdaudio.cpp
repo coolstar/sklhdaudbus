@@ -20,16 +20,40 @@ NTSTATUS HDA_TransferCodecVerbs(
 		return STATUS_NO_SUCH_DEVICE;
 	}
 
-	for (ULONG i = 0; i < Count; i++) {
-		PHDAUDIO_CODEC_TRANSFER transfer = &CodecTransfer[i];
-		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
-		status = RunSingleHDACmd(devData->FdoContext, transfer->Output.Command, &transfer->Input.Response);
-		if (NT_SUCCESS(status)) {
-			transfer->Input.IsValid = 1;
-			//DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);
-		} else {
-			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL, "%s: Verb exec failed! 0x%x\n", __func__, status);
+	PFDO_CONTEXT fdoCtx = devData->FdoContext;
+
+	status = SendHDACmds(fdoCtx, Count, CodecTransfer);
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
+
+	UINT16 codecAddr = (UINT16)devData->CodecIds.CodecAddress;
+
+	int timeout_ms = 1000;
+	LARGE_INTEGER StartTime;
+	KeQuerySystemTimePrecise(&StartTime);
+	for (ULONG loopcounter = 0; ; loopcounter++) {
+		ULONG TransferredCount = 0;
+		for (ULONG i = 0; i < Count; i++) {
+			if (CodecTransfer[i].Input.IsValid) {
+				TransferredCount++;
+			}
 		}
+		if (TransferredCount >= Count) {
+			break;
+		}
+
+		LARGE_INTEGER CurrentTime;
+		KeQuerySystemTimePrecise(&CurrentTime);
+
+		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
+			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], Count - TransferredCount);
+			return STATUS_IO_TIMEOUT;
+		}
+
+		LARGE_INTEGER Timeout;
+		Timeout.QuadPart = -10 * 100;
+		KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
 	}
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);

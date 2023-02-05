@@ -361,22 +361,19 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->processUnsol = TRUE;
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
-			LONG curCmd = fdoCtx->rirb.cmds[addr] - 1;
-			curCmd %= HDA_MAX_CORB_ENTRIES;
-
-			fdoCtx->rirb.xfer[addr][curCmd]->Input.Response = res;
-			fdoCtx->rirb.xfer[addr][curCmd]->Input.IsValid = TRUE;
+			fdoCtx->rirb.xfer[addr][0]->Input.Response = res;
+			fdoCtx->rirb.xfer[addr][0]->Input.IsValid = 1;
+			PHDAUDIO_CODEC_TRANSFER* xfer = fdoCtx->rirb.xfer[addr];
+			RtlMoveMemory(&xfer[0], &xfer[1], sizeof(HDAUDIO_CODEC_TRANSFER) * (HDA_MAX_CORB_ENTRIES - 1));
+			xfer[HDA_MAX_CORB_ENTRIES - 1] = NULL;
 			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
 
 			KeSetEvent(&fdoCtx->rirb.xferEvent[addr], IO_NO_INCREMENT, FALSE);
 		}
 		else {
-			LONG curCmd = fdoCtx->rirb.cmds[addr] - 1;
-			curCmd %= HDA_MAX_CORB_ENTRIES;
-
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-				"spurious response %#x:%#x, last cmd=%#08x\n",
-				res, res_ex, fdoCtx->rirb.xfer[addr][curCmd]->Output.Command);
+				"spurious response %#x:%#x, cmd=%#08x\n",
+				res, res_ex, fdoCtx->rirb.xfer[addr][0]->Output.Command);
 		}
 	}
 }

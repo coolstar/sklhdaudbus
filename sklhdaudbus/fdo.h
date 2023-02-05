@@ -74,7 +74,7 @@ typedef struct _HDAC_STREAM {
 typedef struct _HDAC_RB {
     UINT32 *buf;
     PHYSICAL_ADDRESS addr;
-    USHORT rp, wp;
+    UINT16 rp, wp;
     LONG cmds[HDA_MAX_CODECS];
     KEVENT xferEvent[HDA_MAX_CODECS];
     PHDAUDIO_CODEC_TRANSFER xfer[HDA_MAX_CODECS][HDA_MAX_CORB_ENTRIES];
