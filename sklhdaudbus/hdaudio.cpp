@@ -31,7 +31,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 
 	int timeout_ms = 1000;
 	LARGE_INTEGER StartTime;
-	KeQuerySystemTimePrecise(&StartTime);
+	KeQuerySystemTime(&StartTime);
 	for (ULONG loopcounter = 0; ; loopcounter++) {
 		ULONG TransferredCount = 0;
 		for (ULONG i = 0; i < Count; i++) {
@@ -44,7 +44,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 		}
 
 		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTimePrecise(&CurrentTime);
+		KeQuerySystemTime(&CurrentTime);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
 			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], Count - TransferredCount);

@@ -264,7 +264,7 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 	}
 
 	LARGE_INTEGER StartTime;
-	KeQuerySystemTimePrecise(&StartTime);
+	KeQuerySystemTime(&StartTime);
 
 	int timeout_ms = 1000;
 	for (ULONG loopcounter = 0; ; loopcounter++) {
@@ -276,7 +276,7 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 		}
 
 		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTimePrecise(&CurrentTime);
+		KeQuerySystemTime(&CurrentTime);
 
 		UINT16 addr = HDACommandAddr(transfer.Output.Command);
 
@@ -455,7 +455,7 @@ void hda_dpc(
 			for (int j = 0; j < MAX_NOTIF_EVENTS; j++) {
 				if (stream->registeredCallbacks[j].InUse) {
 					LARGE_INTEGER unknownVal = { 0 };
-					KeQuerySystemTimePrecise(&unknownVal);
+					KeQuerySystemTime(&unknownVal);
 					stream->registeredCallbacks[j].NotificationCallback(stream->registeredCallbacks[j].CallbackContext, unknownVal);
 				}
 			}
