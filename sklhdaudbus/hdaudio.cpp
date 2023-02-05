@@ -83,7 +83,7 @@ NTSTATUS HDA_AllocateCaptureDmaEngine(
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	for (UINT32 i = 0; i < fdoContext->captureStreams; i++) {
-		int tag = fdoContext->captureIndexOff;
+		int tag = fdoContext->captureIndexOff + i;
 		PHDAC_STREAM stream = &fdoContext->streams[tag];
 		if (stream->PdoContext != NULL) {
 			continue;
@@ -122,7 +122,7 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	for (UINT32 i = 0; i < fdoContext->playbackStreams; i++) {
-		int tag = fdoContext->playbackIndexOff;
+		int tag = fdoContext->playbackIndexOff + i;
 		PHDAC_STREAM stream = &fdoContext->streams[tag];
 		if (stream->PdoContext != NULL) {
 			continue;
