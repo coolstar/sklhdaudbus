@@ -568,7 +568,7 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	stream_write32(stream, SD_BDLPU, 0);
 	stream_write32(stream, SD_CTL, 0);
 
-	MmFreePagesFromMdlEx(stream->mdlBuf, MM_DONT_ZERO_ALLOCATION);
+	MmFreePagesFromMdl(stream->mdlBuf);
 	ExFreePool(stream->mdlBuf);
 	stream->mdlBuf = NULL;
 
