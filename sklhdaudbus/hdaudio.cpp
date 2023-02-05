@@ -152,14 +152,33 @@ NTSTATUS HDA_ChangeBandwidthAllocation(
 	_In_ PHDAUDIO_STREAM_FORMAT StreamFormat,
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
-	UNREFERENCED_PARAMETER(_context);
-	UNREFERENCED_PARAMETER(Handle);
-	UNREFERENCED_PARAMETER(StreamFormat);
-	UNREFERENCED_PARAMETER(ConverterFormat);
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	PHDAC_STREAM stream = (PHDAC_STREAM)Handle;
+	if (stream->PdoContext != devData) {
+		return STATUS_INVALID_HANDLE;
+	}
+
+	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
+
+	if (stream->running) {
+		WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+		return STATUS_INVALID_DEVICE_REQUEST;
+	}
+
+	stream->streamFormat = *StreamFormat;
+	ConverterFormat->ConverterFormat = hdac_format(stream);
+
+	hdac_stream_setup(stream);
+
+	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called!\n", __func__);
 
-	return STATUS_UNSUCCESSFUL;
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS HDA_FreeDmaEngine(
@@ -218,7 +237,7 @@ NTSTATUS HDA_SetDmaEngineState(
 		}
 		else if (StreamState == ResetState) {
 			if (!stream->running) {
-				//hdac_stream_reset(stream);
+				hdac_stream_reset(stream);
 			}
 			else {
 				return STATUS_INVALID_PARAMETER;
