@@ -224,8 +224,6 @@ NTSTATUS ADSPPrepareDSP(
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
-	PHYSICAL_ADDRESS zeroAddr;
-	zeroAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
 	maxAddr.QuadPart = MAXULONG64;
 

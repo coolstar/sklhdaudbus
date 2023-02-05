@@ -320,9 +320,6 @@ Fdo_EvtDevicePrepareHardware(
     }
     RtlZeroMemory(fdoCtx->streams, sizeof(HDAC_STREAM) * fdoCtx->numStreams);
 
-    PHYSICAL_ADDRESS zeroAddr;
-    zeroAddr.QuadPart = 0;
-
     PHYSICAL_ADDRESS maxAddr;
     maxAddr.QuadPart = MAXULONG64;
 
