@@ -102,9 +102,6 @@ typedef struct _FDO_CONTEXT
 
     UINT8* ppcap;
     UINT8 *spbcap;
-    UINT8* mlcap;
-    UINT8* gtscap;
-    UINT8* drsmcap;
 
     BOOLEAN is64BitOK;
     UINT16 hwVersion;

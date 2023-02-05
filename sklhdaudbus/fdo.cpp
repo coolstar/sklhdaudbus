@@ -263,13 +263,11 @@ Fdo_EvtDevicePrepareHardware(
             case HDA_ML_CAP_ID:
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                     "Found ML capability\n");
-                fdoCtx->mlcap = fdoCtx->m_BAR0.Base.baseptr + offset;
                 break;
 
             case HDA_GTS_CAP_ID:
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                     "Found GTS capability offset=%x\n", offset);
-                fdoCtx->gtscap = fdoCtx->m_BAR0.Base.baseptr + offset;
                 break;
 
             case HDA_PP_CAP_ID:
@@ -290,7 +288,6 @@ Fdo_EvtDevicePrepareHardware(
                 /* DMA resume  capability found, handler function */
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                     "Found DRSM capability\n");
-                fdoCtx->drsmcap = fdoCtx->m_BAR0.Base.baseptr + offset;
                 break;
 
             default:
