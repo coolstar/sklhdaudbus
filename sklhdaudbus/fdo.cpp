@@ -35,8 +35,6 @@ Fdo_Create(
     pnpPowerCallbacks.EvtDeviceSelfManagedIoInit = Fdo_EvtDeviceSelfManagedIoInit;
     WdfDeviceInitSetPnpPowerEventCallbacks(DeviceInit, &pnpPowerCallbacks);
 
-    WdfDeviceInitSetPowerPageable(DeviceInit);
-
     //
     // WDF_ DEVICE_LIST_CONFIG describes how the framework should handle
     // dynamic child enumeration on behalf of the driver writer.
