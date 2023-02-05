@@ -528,7 +528,7 @@ Fdo_EvtDeviceD0Exit(
     return status;
 }
 
-#define ENABLE_HDA 0
+#define ENABLE_HDA 1
 
 NTSTATUS
 Fdo_EvtDeviceSelfManagedIoInit(
@@ -550,8 +550,6 @@ Fdo_EvtDeviceSelfManagedIoInit(
             continue;
 
         KeInitializeEvent(&fdoCtx->rirb.xferEvent[addr], NotificationEvent, FALSE);
-
-        DbgPrint("Scan index %d\n", addr);
 
         UINT32 cmdTmpl = (addr << 28) | (AC_NODE_ROOT << 20) |
             (AC_VERB_PARAMETERS << 8);
@@ -594,8 +592,6 @@ Fdo_EvtDeviceSelfManagedIoInit(
         UINT32 cmd = (addr << 28) | (mainFuncGrp << 20) |
             (AC_VERB_GET_SUBSYSTEM_ID << 8);
         RunSingleHDACmd(fdoCtx, cmd, &subsysId);
-
-        DbgPrint("Func 0x%x, vendor: 0x%x, subsys: 0x%x, rev: 0x%x, start group 0x%x, node count %d\n", funcType, vendorDevice, subsysId, revId, startID, nodeCount);
 
         PDO_IDENTIFICATION_DESCRIPTION description;
         //
