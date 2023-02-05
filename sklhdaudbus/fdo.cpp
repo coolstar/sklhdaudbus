@@ -563,6 +563,8 @@ Fdo_EvtDeviceSelfManagedIoInit(
         if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
             continue;
 
+        KeInitializeEvent(&fdoCtx->rirb.xferEvent[addr], NotificationEvent, FALSE);
+
         DbgPrint("Scan index %d\n", addr);
 
         UINT32 cmdTmpl = (addr << 28) | (AC_NODE_ROOT << 20) |

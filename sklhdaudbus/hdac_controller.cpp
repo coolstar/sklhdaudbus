@@ -274,14 +274,16 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 		LARGE_INTEGER CurrentTime;
 		KeQuerySystemTimePrecise(&CurrentTime);
 
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			UINT16 addr = HDACommandAddr(transfer.Output.Command);
+		UINT16 addr = HDACommandAddr(transfer.Output.Command);
 
+		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
 			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
 			return STATUS_IO_TIMEOUT;
 		}
 
-		udelay(100);
+		LARGE_INTEGER Timeout;
+		Timeout.QuadPart = -10 * 100;
+		KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[addr], Executive, KernelMode, TRUE, &Timeout);
 	}
 }
 
@@ -359,8 +361,6 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->processUnsol = TRUE;
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
-			DbgPrint("Got response for addr 0x%x\n", addr);
-
 			LONG curCmd = fdoCtx->rirb.cmds[addr] - 1;
 			curCmd %= HDA_MAX_CORB_ENTRIES;
 
@@ -368,9 +368,7 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->rirb.xfer[addr][curCmd]->Input.IsValid = TRUE;
 			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
 
-			if (!fdoCtx->rirb.cmds[addr]) {
-				//TODO: Notify for RIRB processed
-			}
+			KeSetEvent(&fdoCtx->rirb.xferEvent[addr], IO_NO_INCREMENT, FALSE);
 		}
 		else {
 			LONG curCmd = fdoCtx->rirb.cmds[addr] - 1;
