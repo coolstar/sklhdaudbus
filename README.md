@@ -1,6 +1,10 @@
-WIP Skylake / Kaby Lake / Apollo Lake+ HD Audio Bus Driver
+HD Audio Bus Driver for Intel Skylake and newer
 
-* TODO: Exposes HD Audio devices
-	* TODO: Should be compatible with most HD Audio buses
-* Support accessing AudioDSP on SKL/KBL/APL/GLK/CML/JSL/TGL/ADL
+* Exposes HD Audio devices
+	* Compatible with VMWare, QEMU, and Intel Skylake / Kaby Lake / Apollo Lake / Gemini Lake / Comet Lake / Tiger Lake / Jasper Lake / Alder Lake
+	* Compatible with Windows default codec driver (QEMU / VMWare)
+	* Compatible with Intel Display Audio driver (Intel Lakes)
+* Support accessing AudioDSP on Intel platforms
 * Compatible with csaudiosstavs and csaudiointcsof
+* Working Sleep / Wake
+* Compatible with Windows 10 / 11 64-bit
