@@ -358,6 +358,8 @@ static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
 		else if (fdoCtx->rirb.cmds[addr]) {
 			PHDAC_CODEC_XFER codecXfer = &fdoCtx->rirb.xfer[addr];
 			if (codecXfer->xfer[0]) {
+				SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
+					"Got response for 0x%x: 0x%x\n", codecXfer->xfer[0]->Output.Command, rirb.response);
 				codecXfer->xfer[0]->Input.Response = rirb.response;
 				codecXfer->xfer[0]->Input.IsValid = 1;
 			}

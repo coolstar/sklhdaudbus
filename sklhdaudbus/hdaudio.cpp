@@ -48,6 +48,8 @@ NTSTATUS HDA_TransferCodecVerbs(
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
 			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], Count - TransferredCount);
+
+			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s timeout (Count: %d, transferred %d)!\n", __func__, Count, TransferredCount);
 			return STATUS_IO_TIMEOUT;
 		}
 
