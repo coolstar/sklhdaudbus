@@ -73,7 +73,7 @@ extern "C" {
     VOID
         Bus_EvtChildListIdentificationDescriptionCleanup(
             _In_ WDFCHILDLIST DeviceList,
-            _Out_ PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription
+            _Inout_ PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription
         );
 
     NTSTATUS

@@ -44,7 +44,6 @@ typedef struct _HDAC_STREAM {
     HDAC_BDLENTRY* bdl;
 
     BOOLEAN stripe;
-    int direction;
 
     UINT32 bufSz;
     UINT32 periodBytes;
@@ -71,8 +70,16 @@ typedef struct _HDAC_STREAM {
     BOOLEAN irqReceived;
 } HDAC_STREAM, *PHDAC_STREAM;
 
+typedef struct _HDAC_RIRB {
+    UINT32 response;
+    UINT32 response_ex;
+} HDAC_RIRB, *PHDAC_RIRB;
+
 typedef struct _HDAC_RB {
-    UINT32 *buf;
+    union {
+        UINT32* buf;
+        PHDAC_RIRB rirbbuf;
+    };
     PHYSICAL_ADDRESS addr;
     UINT16 rp, wp;
     LONG cmds[HDA_MAX_CODECS];
@@ -119,7 +126,7 @@ typedef struct _FDO_CONTEXT
     UINT64 sofTplgSz;
 
     //unsolicited events
-    UINT32 unsol_queue[HDA_UNSOL_QUEUE_SIZE * 2];
+    HDAC_RIRB unsol_queue[HDA_UNSOL_QUEUE_SIZE * 2];
     UINT unsol_rp, unsol_wp;
     BOOL processUnsol;
 

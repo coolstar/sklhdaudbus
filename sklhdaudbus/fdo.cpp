@@ -348,41 +348,43 @@ Fdo_EvtDevicePrepareHardware(
         UINT8 streamTags[2] = { 0, 0 };
 
         for (i = 0; i < fdoCtx->numStreams; i++) {
-            int dir = (i >= fdoCtx->captureIndexOff &&
+            int isCapture = (i >= fdoCtx->captureIndexOff &&
                 i < fdoCtx->captureIndexOff + fdoCtx->captureStreams);
             /* stream tag must be unique throughout
              * the stream direction group,
              * valid values 1...15
              * use separate stream tag
              */
-            UINT8 tag = ++streamTags[dir];
+            UINT8 tag = ++streamTags[isCapture];
 
             {
+                UINT64 idx = i;
+
                 PHDAC_STREAM stream = &fdoCtx->streams[i];
                 stream->FdoContext = fdoCtx;
                 /* offset: SDI0=0x80, SDI1=0xa0, ... SDO3=0x160 */
-                stream->sdAddr = fdoCtx->m_BAR0.Base.baseptr + (0x20 * i + 0x80);
+                stream->sdAddr = fdoCtx->m_BAR0.Base.baseptr + (0x20 * idx + 0x80);
                 /* int mask: SDI0=0x01, SDI1=0x02, ... SDO3=0x80 */
                 stream->int_sta_mask = 1 << i;
                 stream->idx = i;
-                stream->direction = dir;
                 if (fdoCtx->venId == VEN_INTEL)
                     stream->streamTag = tag;
                 else
                     stream->streamTag = i + 1;
-                stream->posbuf = (UINT32 *)(((UINT8 *)fdoCtx->posbuf) + (i * 8));
+
+                stream->posbuf = (UINT32 *)(((UINT8 *)fdoCtx->posbuf) + (idx * 8));
 
                 if (fdoCtx->ppcap) {
                     stream->pphc_addr = fdoCtx->ppcap + HDA_PPHC_BASE +
-                        (HDA_PPHC_INTERVAL * stream->idx);
+                        (HDA_PPHC_INTERVAL * idx);
                     stream->pplc_addr = fdoCtx->ppcap + HDA_PPLC_BASE +
-                        (HDA_PPLC_MULTI * fdoCtx->numStreams) +
-                        (HDA_PPLC_INTERVAL * stream->idx);
+                        (HDA_PPLC_MULTI * (UINT64)fdoCtx->numStreams) +
+                        (HDA_PPLC_INTERVAL * idx);
                 }
 
                 stream->spib_addr = NULL;
                 if (fdoCtx->spbcap) {
-                    stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * stream->idx) + HDA_SPB_SPIB;
+                    stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * idx) + HDA_SPB_SPIB;
                 }
 
                 stream->bdl = (PHDAC_BDLENTRY)MmAllocateContiguousMemory(BDL_SIZE, maxAddr);

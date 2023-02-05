@@ -95,7 +95,7 @@ Return Value:
 VOID
 Bus_EvtChildListIdentificationDescriptionCleanup(
     _In_ WDFCHILDLIST DeviceList,
-    _Out_ PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription
+    _Inout_ PWDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER IdentificationDescription
 )
 /*++
 Routine Description:
@@ -108,17 +108,8 @@ Arguments:
 Return Value:
 --*/
 {
-    PPDO_IDENTIFICATION_DESCRIPTION pDesc;
-
-
     UNREFERENCED_PARAMETER(DeviceList);
-
-    pDesc = CONTAINING_RECORD(IdentificationDescription,
-        PDO_IDENTIFICATION_DESCRIPTION,
-        Header);
-
-    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
-        "%s\n", __func__);
+    UNREFERENCED_PARAMETER(IdentificationDescription);
 }
 
 NTSTATUS

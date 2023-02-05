@@ -287,49 +287,43 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 	}
 }
 
-//Old
 #define HDA_RIRB_EX_UNSOL_EV	(1<<4)
 
-void hdac_bus_process_unsol_events(PFDO_CONTEXT fdoCtx) {
-	UINT rp, caddr, res;
+static void HDAProcessUnsolEvents(PFDO_CONTEXT fdoCtx) {
+	UINT rp;
 	while (fdoCtx->unsol_rp != fdoCtx->unsol_wp) {
 		rp = (fdoCtx->unsol_rp + 1) % HDA_UNSOL_QUEUE_SIZE;
 		fdoCtx->unsol_rp = rp;
-		rp <<= 1;
-		res = fdoCtx->unsol_queue[rp];
-		caddr = fdoCtx->unsol_queue[rp + 1];
 
-		if (!(caddr & (1 << 4))) //no unsolicited event
-			continue;
+		HDAC_RIRB rirb = fdoCtx->unsol_queue[rp];
 
-		UINT8 addr = caddr & 0x0f;
-		PPDO_DEVICE_DATA codec = fdoCtx->codecs[addr];
-		if (!codec || codec->FdoContext != fdoCtx)
+		if (!(rirb.response_ex & HDA_RIRB_EX_UNSOL_EV)) //no unsolicited event
 			continue;
 
 		HDAUDIO_CODEC_RESPONSE response;
 		RtlZeroMemory(&response, sizeof(HDAUDIO_CODEC_RESPONSE));
 
-		response.Response = res;
+		response.Response = rirb.response;
 		response.IsUnsolicitedResponse = 1;
 
-		UINT tag = response.Unsolicited.Tag;
-		if (codec->unsolitCallbacks[tag].inUse && codec->unsolitCallbacks[tag].Routine) {
-			codec->unsolitCallbacks[tag].Routine(response, codec->unsolitCallbacks[tag].Context);
+		PPDO_DEVICE_DATA codec = fdoCtx->codecs[rirb.response_ex & 0x0f];
+		if (!codec || codec->FdoContext != fdoCtx)
+			continue;
+
+		UINT Tag = response.Unsolicited.Tag;
+		CODEC_UNSOLIT_CALLBACK callback = codec->unsolitCallbacks[Tag];
+		if (callback.inUse && callback.Routine) {
+			callback.Routine(response, callback.Context);
 		}
 	}
 }
 
-void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
-	UINT rp, wp;
-	UINT32 res, res_ex;
-	UINT16 addr;
+static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
+	UINT16 wp, addr;
 
 	wp = hda_read16(fdoCtx, RIRBWP);
 	if (wp == 0xffff) {
-		//Something wrong, controller likely went to sleep
-		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-			"%s: device not found\n", __func__);
+		//Invalid WP
 		return;
 	}
 
@@ -341,27 +335,24 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 		fdoCtx->rirb.rp++;
 		fdoCtx->rirb.rp %= HDA_MAX_RIRB_ENTRIES;
 
-		rp = fdoCtx->rirb.rp << 1; /* an RIRB entry is 8-bytes */
-		res_ex = fdoCtx->rirb.buf[rp + 1];
-		res = fdoCtx->rirb.buf[rp];
-		addr = res_ex & 0xf;
+		HDAC_RIRB rirb = fdoCtx->rirb.rirbbuf[fdoCtx->rirb.rp];
+
+		addr = rirb.response_ex & 0xf;
 		if (addr >= HDA_MAX_CODECS) {
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-				"spurious response %#x: %#x, rp = % d, wp = % d\n",
-				res, res_ex, fdoCtx->rirb.rp, wp);
+				"Unexpected unsolicited response %x: %x\n",
+				rirb.response, rirb.response_ex);
 		}
-		else if (res_ex & HDA_RIRB_EX_UNSOL_EV) {
+		else if (rirb.response_ex & HDA_RIRB_EX_UNSOL_EV) {
 			UINT unsol_wp = (fdoCtx->unsol_wp + 1) % HDA_UNSOL_QUEUE_SIZE;
 			fdoCtx->unsol_wp = unsol_wp;
 
-			unsol_wp <<= 1;
-			fdoCtx->unsol_queue[unsol_wp] = res;
-			fdoCtx->unsol_queue[unsol_wp + 1] = res_ex;
+			fdoCtx->unsol_queue[unsol_wp] = rirb;
 
 			fdoCtx->processUnsol = TRUE;
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
-			fdoCtx->rirb.xfer[addr][0]->Input.Response = res;
+			fdoCtx->rirb.xfer[addr][0]->Input.Response = rirb.response;
 			fdoCtx->rirb.xfer[addr][0]->Input.IsValid = 1;
 			PHDAUDIO_CODEC_TRANSFER* xfer = fdoCtx->rirb.xfer[addr];
 			RtlMoveMemory(&xfer[0], &xfer[1], sizeof(HDAUDIO_CODEC_TRANSFER) * (HDA_MAX_CORB_ENTRIES - 1));
@@ -372,8 +363,8 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 		}
 		else {
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-				"spurious response %#x:%#x, cmd=%#08x\n",
-				res, res_ex, fdoCtx->rirb.xfer[addr][0]->Output.Command);
+				"Unexpected unsolicited response from address %d %x\n", addr,
+				rirb.response);
 		}
 	}
 }
@@ -404,43 +395,29 @@ BOOLEAN hda_interrupt(
 	WDFDEVICE Device = WdfInterruptGetDevice(Interrupt);
 	PFDO_CONTEXT fdoCtx = Fdo_GetContext(Device);
 
-	BOOLEAN active, handled = FALSE;
+	BOOLEAN handled = FALSE;
 
 	if (fdoCtx->dspInterruptCallback) {
 		handled = (BOOLEAN)fdoCtx->dspInterruptCallback(fdoCtx->dspInterruptContext);
 	}
 
-	int repeat = 0; //Avoid endless loop
-	do {
-		UINT32 status = hda_read32(fdoCtx, INTSTS);
-		if (status == 0 || status == 0xffffffff)
-			break;
+	UINT32 status = hda_read32(fdoCtx, INTSTS);
+	if (status == 0 || status == 0xffffffff)
+		return handled;
 
-		handled = TRUE;
-		active = FALSE;
+	handled = TRUE;
 
-		if (hda_stream_interrupt(fdoCtx, status)) {
-			WdfInterruptQueueDpcForIsr(Interrupt);
-			active = TRUE;
+	if (hda_stream_interrupt(fdoCtx, status)) {
+		WdfInterruptQueueDpcForIsr(Interrupt);
+	}
+
+	status = hda_read16(fdoCtx, RIRBSTS);
+	if (status & RIRB_INT_MASK) {
+		hda_write16(fdoCtx, RIRBSTS, RIRB_INT_MASK);
+		if (status & RIRB_INT_RESPONSE) {
+			HDAFlushRIRB(fdoCtx);
 		}
-
-		status = hda_read16(fdoCtx, RIRBSTS);
-		if (status & RIRB_INT_MASK) {
-			/*
-			 * Clearing the interrupt status here ensures that no
-			 * interrupt gets masked after the RIRB wp is read in
-			 * snd_hdac_bus_update_rirb. This avoids a possible
-			 * race condition where codec response in RIRB may
-			 * remain unserviced by IRQ, eventually falling back
-			 * to polling mode in azx_rirb_get_response.
-			 */
-			hda_write16(fdoCtx, RIRBSTS, RIRB_INT_MASK);
-			active = TRUE;
-			if (status & RIRB_INT_RESPONSE) {
-				hdac_bus_update_rirb(fdoCtx);
-			}
-		}
-	} while (active && ++repeat < 10);
+	}
 
 	if (fdoCtx->processUnsol) {
 		WdfInterruptQueueDpcForIsr(Interrupt);
@@ -481,6 +458,6 @@ void hda_dpc(
 
 	if (fdoCtx->processUnsol) {
 		fdoCtx->processUnsol = FALSE;
-		hdac_bus_process_unsol_events(fdoCtx);
+		HDAProcessUnsolEvents(fdoCtx);
 	}
 }
