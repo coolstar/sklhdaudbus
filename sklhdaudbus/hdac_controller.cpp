@@ -189,6 +189,8 @@ NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx) {
 
 	udelay(1000);
 
+	fdoCtx->ControllerEnabled = TRUE;
+
 exit:
 	WdfInterruptReleaseLock(fdoCtx->Interrupt);
 	return status;
@@ -198,6 +200,8 @@ NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx) {
 	WdfInterruptAcquireLock(fdoCtx->Interrupt);
 
 	NTSTATUS status = ResetHDAController(fdoCtx, FALSE);
+
+	fdoCtx->ControllerEnabled = FALSE;
 
 	WdfInterruptReleaseLock(fdoCtx->Interrupt);
 
@@ -238,7 +242,7 @@ NTSTATUS SendHDACmds(PFDO_CONTEXT fdoCtx, ULONG count, PHDAUDIO_CODEC_TRANSFER C
 			return STATUS_RETRY;
 		}
 
-		fdoCtx->rirb.xfer[addr][fdoCtx->rirb.cmds[addr]] = transfer;
+		fdoCtx->rirb.xfer[addr].xfer[fdoCtx->rirb.cmds[addr]] = transfer;
 		InterlockedIncrement(&fdoCtx->rirb.cmds[addr]);
 
 		fdoCtx->corb.buf[wp] = transfer->Output.Command;
@@ -352,11 +356,14 @@ static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->processUnsol = TRUE;
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
-			fdoCtx->rirb.xfer[addr][0]->Input.Response = rirb.response;
-			fdoCtx->rirb.xfer[addr][0]->Input.IsValid = 1;
-			PHDAUDIO_CODEC_TRANSFER* xfer = fdoCtx->rirb.xfer[addr];
-			RtlMoveMemory(&xfer[0], &xfer[1], sizeof(HDAUDIO_CODEC_TRANSFER) * (HDA_MAX_CORB_ENTRIES - 1));
-			xfer[HDA_MAX_CORB_ENTRIES - 1] = NULL;
+			PHDAC_CODEC_XFER codecXfer = &fdoCtx->rirb.xfer[addr];
+			if (codecXfer->xfer[0]) {
+				codecXfer->xfer[0]->Input.Response = rirb.response;
+				codecXfer->xfer[0]->Input.IsValid = 1;
+			}
+			
+			RtlMoveMemory(&codecXfer->xfer[0], &codecXfer->xfer[1], sizeof(PHDAUDIO_CODEC_TRANSFER) * (HDA_MAX_CORB_ENTRIES - 1));
+			codecXfer->xfer[HDA_MAX_CORB_ENTRIES - 1] = NULL;
 			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
 
 			KeSetEvent(&fdoCtx->rirb.xferEvent[addr], IO_NO_INCREMENT, FALSE);
@@ -400,6 +407,9 @@ BOOLEAN hda_interrupt(
 	if (fdoCtx->dspInterruptCallback) {
 		handled = (BOOLEAN)fdoCtx->dspInterruptCallback(fdoCtx->dspInterruptContext);
 	}
+
+	if (!fdoCtx->ControllerEnabled)
+		return handled;
 
 	UINT32 status = hda_read32(fdoCtx, INTSTS);
 	if (status == 0 || status == 0xffffffff)

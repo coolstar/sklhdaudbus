@@ -466,6 +466,8 @@ Fdo_EvtDeviceReleaseHardware(
     return STATUS_SUCCESS;
 }
 
+#define ENABLE_HDA 1
+
 NTSTATUS
 Fdo_EvtDeviceD0Entry(
     _In_ WDFDEVICE Device,
@@ -491,6 +493,16 @@ Fdo_EvtDeviceD0Entry(
         pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
     }
 
+    //Reset unsolicited queue
+    RtlZeroMemory(&fdoCtx->unsol_queue, sizeof(fdoCtx->unsol_queue));
+    fdoCtx->unsol_rp = 0;
+    fdoCtx->unsol_wp = 0;
+    fdoCtx->processUnsol = FALSE;
+
+    //Reset CORB / RIRB
+    RtlZeroMemory(&fdoCtx->corb, sizeof(fdoCtx->corb));
+    RtlZeroMemory(&fdoCtx->rirb, sizeof(fdoCtx->rirb));
+
     status = StartHDAController(fdoCtx);
 
     if (fdoCtx->venId == VEN_INTEL) {
@@ -504,6 +516,25 @@ Fdo_EvtDeviceD0Entry(
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "hda bus initialized\n");
+
+#if ENABLE_HDA
+    for (UINT8 addr = 0; addr < HDA_MAX_CODECS; addr++) {
+        if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
+            continue;
+
+        KeInitializeEvent(&fdoCtx->rirb.xferEvent[addr], NotificationEvent, FALSE);
+
+        UINT32 cmdTmpl = (addr << 28) | (AC_NODE_ROOT << 20) |
+            (AC_VERB_PARAMETERS << 8);
+
+        ULONG vendorDevice;
+        RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice); //Some codecs might need a kickstart
+    }
+#endif
+
+    HDAUDIO_CODEC_TRANSFER transfer = { 0 };
+    SendHDACmds(fdoCtx, 1, &transfer); //Some devices need a null command to init
+
     return status;
 }
 
@@ -528,8 +559,6 @@ Fdo_EvtDeviceD0Exit(
     return status;
 }
 
-#define ENABLE_HDA 1
-
 NTSTATUS
 Fdo_EvtDeviceSelfManagedIoInit(
     _In_ WDFDEVICE Device
@@ -549,15 +578,11 @@ Fdo_EvtDeviceSelfManagedIoInit(
         if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
             continue;
 
-        KeInitializeEvent(&fdoCtx->rirb.xferEvent[addr], NotificationEvent, FALSE);
-
         UINT32 cmdTmpl = (addr << 28) | (AC_NODE_ROOT << 20) |
             (AC_VERB_PARAMETERS << 8);
         ULONG funcType = 0, vendorDevice, subsysId, revId, nodeCount;
-        if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) { //Intel Kaby Lake may fail to enumerate on the first boot. Retry once before skipping
-            if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) {
-                continue;
-            }
+        if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) {
+            continue;
         }
         if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_REV_ID, &revId))) {
             continue;

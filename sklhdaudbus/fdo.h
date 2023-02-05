@@ -72,6 +72,10 @@ typedef struct _HDAC_RIRB {
     UINT32 response_ex;
 } HDAC_RIRB, *PHDAC_RIRB;
 
+typedef struct _HDAC_CODEC_XFER {
+    PHDAUDIO_CODEC_TRANSFER xfer[HDA_MAX_CORB_ENTRIES];
+} HDAC_CODEC_XFER, *PHDAC_CODEC_XFER;
+
 typedef struct _HDAC_RB {
     union {
         UINT32* buf;
@@ -81,7 +85,7 @@ typedef struct _HDAC_RB {
     UINT16 rp, wp;
     LONG cmds[HDA_MAX_CODECS];
     KEVENT xferEvent[HDA_MAX_CODECS];
-    PHDAUDIO_CODEC_TRANSFER xfer[HDA_MAX_CODECS][HDA_MAX_CORB_ENTRIES];
+    HDAC_CODEC_XFER xfer[HDA_MAX_CODECS];
 } HDAC_RB, *PHDAC_RB;
 
 typedef struct _FDO_CONTEXT
@@ -99,6 +103,8 @@ typedef struct _FDO_CONTEXT
 
     UINT8* ppcap;
     UINT8 *spbcap;
+
+    BOOLEAN ControllerEnabled;
 
     BOOLEAN is64BitOK;
     UINT16 hwVersion;
