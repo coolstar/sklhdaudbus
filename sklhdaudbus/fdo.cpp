@@ -368,14 +368,6 @@ Fdo_EvtDevicePrepareHardware(
 
                 stream->posbuf = (UINT32 *)(((UINT8 *)fdoCtx->posbuf) + (idx * 8));
 
-                if (fdoCtx->ppcap) {
-                    stream->pphc_addr = fdoCtx->ppcap + HDA_PPHC_BASE +
-                        (HDA_PPHC_INTERVAL * idx);
-                    stream->pplc_addr = fdoCtx->ppcap + HDA_PPLC_BASE +
-                        (HDA_PPLC_MULTI * (UINT64)fdoCtx->numStreams) +
-                        (HDA_PPLC_INTERVAL * idx);
-                }
-
                 stream->spib_addr = NULL;
                 if (fdoCtx->spbcap) {
                     stream->spib_addr = fdoCtx->spbcap + HDA_SPB_BASE + (HDA_SPB_INTERVAL * idx) + HDA_SPB_SPIB;

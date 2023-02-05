@@ -53,9 +53,6 @@ typedef struct _HDAC_STREAM {
     UINT8* sdAddr;
     UINT32 int_sta_mask;
 
-    UINT8* pphc_addr; //ppcap
-    UINT8* pplc_addr; //ppcap
-
     UINT8* spib_addr; //spbcap
 
     UINT8 streamTag;
