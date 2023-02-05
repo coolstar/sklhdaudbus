@@ -743,7 +743,7 @@ HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context) {
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
 	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
 	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
-	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation; //TODO
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;
 	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer;
 	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer;
 	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;
@@ -774,7 +774,7 @@ HDAUDIO_BUS_INTERFACE_V3 HDA_BusInterfaceV3(PVOID Context) {
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
 	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
 	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
-	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;  //TODO
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;
 	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer;
 	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer;
 	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;
@@ -807,7 +807,7 @@ HDAUDIO_BUS_INTERFACE HDA_BusInterface(PVOID Context) {
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
 	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
 	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
-	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation; //TODO
+	busInterface.ChangeBandwidthAllocation = HDA_ChangeBandwidthAllocation;
 	busInterface.AllocateDmaBuffer = HDA_AllocateDmaBuffer;
 	busInterface.FreeDmaBuffer = HDA_FreeDmaBuffer;
 	busInterface.FreeDmaEngine = HDA_FreeDmaEngine;
