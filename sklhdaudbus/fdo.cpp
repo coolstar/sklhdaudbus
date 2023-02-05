@@ -5,6 +5,7 @@
 EVT_WDF_DEVICE_PREPARE_HARDWARE Fdo_EvtDevicePrepareHardware;
 EVT_WDF_DEVICE_RELEASE_HARDWARE Fdo_EvtDeviceReleaseHardware;
 EVT_WDF_DEVICE_D0_ENTRY Fdo_EvtDeviceD0Entry;
+EVT_WDF_DEVICE_D0_ENTRY_POST_INTERRUPTS_ENABLED Fdo_EvtDeviceD0EntryPostInterrupts;
 EVT_WDF_DEVICE_D0_EXIT Fdo_EvtDeviceD0Exit;
 EVT_WDF_DEVICE_SELF_MANAGED_IO_INIT Fdo_EvtDeviceSelfManagedIoInit;
 NTSTATUS
@@ -31,6 +32,7 @@ Fdo_Create(
     pnpPowerCallbacks.EvtDevicePrepareHardware = Fdo_EvtDevicePrepareHardware;
     pnpPowerCallbacks.EvtDeviceReleaseHardware = Fdo_EvtDeviceReleaseHardware;
     pnpPowerCallbacks.EvtDeviceD0Entry = Fdo_EvtDeviceD0Entry;
+    pnpPowerCallbacks.EvtDeviceD0EntryPostInterruptsEnabled = Fdo_EvtDeviceD0EntryPostInterrupts;
     pnpPowerCallbacks.EvtDeviceD0Exit = Fdo_EvtDeviceD0Exit;
     pnpPowerCallbacks.EvtDeviceSelfManagedIoInit = Fdo_EvtDeviceSelfManagedIoInit;
     WdfDeviceInitSetPnpPowerEventCallbacks(DeviceInit, &pnpPowerCallbacks);
@@ -514,8 +516,29 @@ Fdo_EvtDeviceD0Entry(
         hda_update32(fdoCtx, VS_EM2, HDA_VS_EM2_DUM, HDA_VS_EM2_DUM);
     }
 
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "hda bus initialized\n");
+
+    return status;
+}
+
+NTSTATUS
+Fdo_EvtDeviceD0EntryPostInterrupts(
+    _In_ WDFDEVICE Device,
+    _In_ WDF_POWER_DEVICE_STATE PreviousState
+)
+{
+    UNREFERENCED_PARAMETER(PreviousState);
+
+    NTSTATUS status;
+    PFDO_CONTEXT fdoCtx;
+
+    status = STATUS_SUCCESS;
+    fdoCtx = Fdo_GetContext(Device);
 
 #if ENABLE_HDA
     for (UINT8 addr = 0; addr < HDA_MAX_CODECS; addr++) {
@@ -528,12 +551,12 @@ Fdo_EvtDeviceD0Entry(
             (AC_VERB_PARAMETERS << 8);
 
         ULONG vendorDevice;
-        RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice); //Some codecs might need a kickstart
+        if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) { //Some codecs might need a kickstart
+            //First attempt failed. Retry
+            status = RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice); //If this fails, something is wrong.
+        }
     }
 #endif
-
-    HDAUDIO_CODEC_TRANSFER transfer = { 0 };
-    SendHDACmds(fdoCtx, 1, &transfer); //Some devices need a null command to init
 
     return status;
 }
