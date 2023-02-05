@@ -23,10 +23,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 	for (ULONG i = 0; i < Count; i++) {
 		PHDAUDIO_CODEC_TRANSFER transfer = &CodecTransfer[i];
 		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
-		UINT32 response = 0;
-		//DbgPrint("Command: 0x%x\n", transfer->Output.Command);
-		status = hdac_bus_exec_verb(devData->FdoContext, (UINT16)devData->CodecIds.CodecAddress, transfer->Output.Command, &response);
-		transfer->Input.Response = response;
+		status = RunSingleHDACmd(devData->FdoContext, transfer->Output.Command, &transfer->Input.Response);
 		if (NT_SUCCESS(status)) {
 			transfer->Input.IsValid = 1;
 			//DbgPrint("Complete Response: 0x%llx\n", transfer->Input.CompleteResponse);

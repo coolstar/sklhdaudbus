@@ -16,9 +16,9 @@
 #include <hdaudio.h>
 #include <portcls.h>
 
+#include "hda_registers.h"
 #include "fdo.h"
 #include "buspdo.h"
-#include "hda_registers.h"
 #include "hdac_controller.h"
 #include "hdac_stream.h"
 #include "hda_verbs.h"

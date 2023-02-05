@@ -204,54 +204,88 @@ NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx) {
 	return status;
 }
 
-//Old
-static UINT16 hda_command_addr(UINT32 cmd) {
-	UINT16 addr = cmd >> 28;
-	if (addr >= HDA_MAX_CODECS) {
-		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-			"invalid command addr\n");
-		addr = 0;
-	}
-	return addr;
+static UINT16 HDACommandAddr(UINT32 cmd) {
+	return (cmd >> 28) & 0xF;
 }
 
-NTSTATUS hdac_bus_send_cmd(PFDO_CONTEXT fdoCtx, unsigned int val) {
-	UINT16 addr = hda_command_addr(val);
-
+NTSTATUS SendHDACmds(PFDO_CONTEXT fdoCtx, ULONG count, PHDAUDIO_CODEC_TRANSFER CodecTransfer) {
 	WdfInterruptAcquireLock(fdoCtx->Interrupt);
+	for (ULONG i = 0; i < count; i++) {
+		PHDAUDIO_CODEC_TRANSFER transfer = &CodecTransfer[i];
+		RtlZeroMemory(&transfer->Input, sizeof(transfer->Input));
 
-	fdoCtx->last_cmd[addr] = val;
+		UINT16 addr = HDACommandAddr(transfer->Output.Command);
 
-	//Add command to corb
-	UINT16 wp = hda_read16(fdoCtx, CORBWP);
-	if (wp == 0xffff) {
-		//Something wrong, controller likely went to sleep
-		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-			"%s: device not found\n", __func__);
-		WdfInterruptReleaseLock(fdoCtx->Interrupt);
-		return STATUS_DEVICE_DOES_NOT_EXIST;
+		//Add command to corb
+		UINT16 wp = hda_read16(fdoCtx, CORBWP);
+		if (wp == 0xffff) {
+			//Something wrong, controller likely went to sleep
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
+				"%s: device not found\n", __func__);
+			WdfInterruptReleaseLock(fdoCtx->Interrupt);
+			return STATUS_DEVICE_DOES_NOT_EXIST;
+		}
+
+		wp++;
+		wp %= HDA_MAX_CORB_ENTRIES;
+
+		UINT16 rp = hda_read16(fdoCtx, CORBRP);
+		if (wp == rp) {
+			//Oops it's full
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
+				"%s: device busy\n", __func__);
+			WdfInterruptReleaseLock(fdoCtx->Interrupt);
+			return STATUS_RETRY;
+		}
+
+		fdoCtx->rirb.xfer[addr][fdoCtx->rirb.cmds[addr]] = transfer;
+		InterlockedIncrement(&fdoCtx->rirb.cmds[addr]);
+
+		fdoCtx->corb.buf[wp] = transfer->Output.Command;
+
+		hda_write16(fdoCtx, CORBWP, wp);
 	}
-	wp++;
-	wp %= HDA_MAX_CORB_ENTRIES;
-
-	UINT16 rp = hda_read16(fdoCtx, CORBRP);
-	if (wp == rp) {
-		//Oops it's full
-		SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-			"%s: device busy\n", __func__);
-		WdfInterruptReleaseLock(fdoCtx->Interrupt);
-		return STATUS_RETRY;
-	}
-
-	fdoCtx->rirb.cmds[addr]++;
-	fdoCtx->corb.buf[wp] = val;
-
-	hda_write16(fdoCtx, CORBWP, wp);
 
 	WdfInterruptReleaseLock(fdoCtx->Interrupt);
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
+	HDAUDIO_CODEC_TRANSFER transfer = { 0 };
+	transfer.Output.Command = val;
+
+	NTSTATUS status = SendHDACmds(fdoCtx, 1, &transfer);
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
+
+	LARGE_INTEGER StartTime;
+	KeQuerySystemTimePrecise(&StartTime);
+
+	int timeout_ms = 1000;
+	for (ULONG loopcounter = 0; ; loopcounter++) {
+		if (transfer.Input.IsValid) {
+			if (res) {
+				*res = transfer.Input.Response;
+			}
+			return STATUS_SUCCESS;
+		}
+
+		LARGE_INTEGER CurrentTime;
+		KeQuerySystemTimePrecise(&CurrentTime);
+
+		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
+			UINT16 addr = HDACommandAddr(transfer.Output.Command);
+
+			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
+			return STATUS_IO_TIMEOUT;
+		}
+
+		udelay(100);
+	}
+}
+
+//Old
 #define HDA_RIRB_EX_UNSOL_EV	(1<<4)
 
 void hdac_bus_process_unsol_events(PFDO_CONTEXT fdoCtx) {
@@ -325,44 +359,27 @@ void hdac_bus_update_rirb(PFDO_CONTEXT fdoCtx) {
 			fdoCtx->processUnsol = TRUE;
 		}
 		else if (fdoCtx->rirb.cmds[addr]) {
-			fdoCtx->rirb.res[addr] = res;
-			fdoCtx->rirb.cmds[addr]--;
+			DbgPrint("Got response for addr 0x%x\n", addr);
+
+			LONG curCmd = fdoCtx->rirb.cmds[addr] - 1;
+			curCmd %= HDA_MAX_CORB_ENTRIES;
+
+			fdoCtx->rirb.xfer[addr][curCmd]->Input.Response = res;
+			fdoCtx->rirb.xfer[addr][curCmd]->Input.IsValid = TRUE;
+			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
+
 			if (!fdoCtx->rirb.cmds[addr]) {
 				//TODO: Notify for RIRB processed
 			}
 		}
 		else {
+			LONG curCmd = fdoCtx->rirb.cmds[addr] - 1;
+			curCmd %= HDA_MAX_CORB_ENTRIES;
+
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
 				"spurious response %#x:%#x, last cmd=%#08x\n",
-				res, res_ex, fdoCtx->last_cmd[addr])
+				res, res_ex, fdoCtx->rirb.xfer[addr][curCmd]->Output.Command);
 		}
-	}
-}
-
-NTSTATUS hdac_bus_get_response(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32* res) {
-	LARGE_INTEGER StartTime;
-	KeQuerySystemTimePrecise(&StartTime);
-
-	int timeout_ms = 1000;
-	for (ULONG loopcounter = 0; ; loopcounter++) {
-		if (!fdoCtx->rirb.cmds[addr]) {
-			if (res) {
-				*res = fdoCtx->rirb.res[addr]; //the last value
-			}
-			return STATUS_SUCCESS;
-		}
-
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTimePrecise(&CurrentTime);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			WdfInterruptAcquireLock(fdoCtx->Interrupt);
-			fdoCtx->rirb.cmds[addr]--;
-			WdfInterruptReleaseLock(fdoCtx->Interrupt);
-			return STATUS_IO_TIMEOUT;
-		}
-
-		udelay(100);
 	}
 }
 
@@ -471,33 +488,4 @@ void hda_dpc(
 		fdoCtx->processUnsol = FALSE;
 		hdac_bus_process_unsol_events(fdoCtx);
 	}
-}
-
-NTSTATUS hdac_bus_exec_verb_unlocked(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32 cmd, UINT32* res) {
-	NTSTATUS status;
-	UINT32 tmp;
-
-	for (;;) {
-		status = hdac_bus_send_cmd(fdoCtx, cmd);
-		if (status != STATUS_RETRY)
-			break;
-
-		//Process pending verbs
-		status = hdac_bus_get_response(fdoCtx, addr, &tmp);
-		if (!NT_SUCCESS(status))
-			break;
-	}
-	if (NT_SUCCESS(status)) {
-		status = hdac_bus_get_response(fdoCtx, addr, res);
-	}
-	return status;
-}
-
-NTSTATUS hdac_bus_exec_verb(PFDO_CONTEXT fdoCtx, UINT16 addr, UINT32 cmd, UINT32* res) {
-	WdfWaitLockAcquire(fdoCtx->cmdLock, 0);
-
-	NTSTATUS status = hdac_bus_exec_verb_unlocked(fdoCtx, addr, cmd, res);
-
-	WdfWaitLockRelease(fdoCtx->cmdLock);
-	return status;
 }

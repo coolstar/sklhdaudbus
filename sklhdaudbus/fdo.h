@@ -75,8 +75,8 @@ typedef struct _HDAC_RB {
     UINT32 *buf;
     PHYSICAL_ADDRESS addr;
     USHORT rp, wp;
-    int cmds[HDA_MAX_CODECS];
-    UINT32 res[HDA_MAX_CODECS];
+    LONG cmds[HDA_MAX_CODECS];
+    PHDAUDIO_CODEC_TRANSFER xfer[HDA_MAX_CODECS][HDA_MAX_CORB_ENTRIES];
 } HDAC_RB, *PHDAC_RB;
 
 typedef struct _FDO_CONTEXT
@@ -128,8 +128,6 @@ typedef struct _FDO_CONTEXT
 
     HDAC_RB corb;
     HDAC_RB rirb;
-    unsigned int last_cmd[HDA_MAX_CODECS];
-    WDFWAITLOCK cmdLock;
 
     UINT8 *rb; //CORB and RIRB buffers
     PVOID posbuf;

@@ -393,8 +393,6 @@ Fdo_EvtDevicePrepareHardware(
         }
     }
 
-    WdfWaitLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &fdoCtx->cmdLock);
-
     fdoCtx->nhlt = NULL;
     fdoCtx->nhltSz = 0;
 
@@ -569,16 +567,16 @@ Fdo_EvtDeviceSelfManagedIoInit(
 
         UINT32 cmdTmpl = (addr << 28) | (AC_NODE_ROOT << 20) |
             (AC_VERB_PARAMETERS << 8);
-        UINT32 funcType = 0, vendorDevice, subsysId, revId, nodeCount;
-        if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) { //Intel Kaby Lake may fail to enumerate on the first boot. Retry once before skipping
-            if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) {
+        ULONG funcType = 0, vendorDevice, subsysId, revId, nodeCount;
+        if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) { //Intel Kaby Lake may fail to enumerate on the first boot. Retry once before skipping
+            if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) {
                 continue;
             }
         }
-        if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_REV_ID, &revId))) {
+        if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_REV_ID, &revId))) {
             continue;
         }
-        if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmdTmpl | AC_PAR_NODE_COUNT, &nodeCount))) {
+        if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_NODE_COUNT, &nodeCount))) {
             continue;
         }
 
@@ -593,7 +591,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
             for (UINT32 i = 0; i < nodeCount; i++, nid++) {
                 UINT32 cmd = (addr << 28) | (nid << 20) |
                     (AC_VERB_PARAMETERS << 8) | AC_PAR_FUNCTION_TYPE;
-                if (!NT_SUCCESS(hdac_bus_exec_verb(fdoCtx, addr, cmd, &funcType))) {
+                if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmd, &funcType))) {
                     continue;
                 }
                 switch (funcType & 0xFF) {
@@ -607,7 +605,7 @@ Fdo_EvtDeviceSelfManagedIoInit(
 
         UINT32 cmd = (addr << 28) | (mainFuncGrp << 20) |
             (AC_VERB_GET_SUBSYSTEM_ID << 8);
-        hdac_bus_exec_verb(fdoCtx, addr, cmd, &subsysId);
+        RunSingleHDACmd(fdoCtx, cmd, &subsysId);
 
         DbgPrint("Func 0x%x, vendor: 0x%x, subsys: 0x%x, rev: 0x%x, start group 0x%x, node count %d\n", funcType, vendorDevice, subsysId, revId, startID, nodeCount);
 
