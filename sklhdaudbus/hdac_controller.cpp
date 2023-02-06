@@ -162,8 +162,6 @@ void HDAStartRirb(PFDO_CONTEXT fdoCtx) {
 
 NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx) {
 	NTSTATUS status;
-	WdfInterruptAcquireLock(fdoCtx->Interrupt);
-
 	status = ResetHDAController(fdoCtx, TRUE);
 	if (!NT_SUCCESS(status)) {
 		goto exit;
@@ -192,19 +190,12 @@ NTSTATUS StartHDAController(PFDO_CONTEXT fdoCtx) {
 	fdoCtx->ControllerEnabled = TRUE;
 
 exit:
-	WdfInterruptReleaseLock(fdoCtx->Interrupt);
 	return status;
 }
 
 NTSTATUS StopHDAController(PFDO_CONTEXT fdoCtx) {
-	WdfInterruptAcquireLock(fdoCtx->Interrupt);
-
 	NTSTATUS status = ResetHDAController(fdoCtx, FALSE);
-
 	fdoCtx->ControllerEnabled = FALSE;
-
-	WdfInterruptReleaseLock(fdoCtx->Interrupt);
-
 	return status;
 }
 
