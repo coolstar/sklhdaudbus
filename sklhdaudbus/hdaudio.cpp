@@ -76,6 +76,10 @@ NTSTATUS HDA_AllocateCaptureDmaEngine(
 ) {
 	UNREFERENCED_PARAMETER(CodecAddress);
 
+	if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -115,6 +119,10 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 	_Out_ PHANDLE Handle,
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
+	if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -154,6 +162,10 @@ NTSTATUS HDA_ChangeBandwidthAllocation(
 	_In_ PHDAUDIO_STREAM_FORMAT StreamFormat,
 	_Out_ PHDAUDIO_CONVERTER_FORMAT ConverterFormat
 ) {
+	if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -187,6 +199,10 @@ NTSTATUS HDA_FreeDmaEngine(
 	_In_ PVOID _context,
 	_In_ HANDLE Handle
 ) {
+	if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -403,6 +419,10 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	_Out_ PUCHAR StreamId,
 	_Out_ PULONG FifoSize
 ) {
+	if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -425,10 +445,6 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	zeroAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
 	maxAddr.QuadPart = MAXUINT64;
-
-	if (KeGetCurrentIrql() > APC_LEVEL) {
-		return STATUS_UNSUCCESSFUL;
-	}
 
 	UINT32 allocSize = (UINT32)RequestedBufferSize;
 	UINT32 allocOffset = 0;
@@ -544,6 +560,10 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	UNREFERENCED_PARAMETER(BufferMdl);
 	UNREFERENCED_PARAMETER(BufferSize);
 
+	if (KeGetCurrentIrql() > PASSIVE_LEVEL) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
 	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
 	if (!devData->FdoContext) {
 		return STATUS_NO_SUCH_DEVICE;
@@ -568,11 +588,13 @@ NTSTATUS HDA_FreeDmaBufferWithNotification(
 	stream_write32(stream, SD_BDLPU, 0);
 	stream_write32(stream, SD_CTL, 0);
 
-	MmFreePagesFromMdl(stream->mdlBuf);
-	ExFreePool(stream->mdlBuf);
+	PMDL mdl = stream->mdlBuf;
 	stream->mdlBuf = NULL;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	MmFreePagesFromMdl(mdl);
+	ExFreePool(mdl);
 
 	return STATUS_SUCCESS;
 }
