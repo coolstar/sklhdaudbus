@@ -8,6 +8,15 @@ EVT_WDF_DEVICE_D0_ENTRY Fdo_EvtDeviceD0Entry;
 EVT_WDF_DEVICE_D0_ENTRY_POST_INTERRUPTS_ENABLED Fdo_EvtDeviceD0EntryPostInterrupts;
 EVT_WDF_DEVICE_D0_EXIT Fdo_EvtDeviceD0Exit;
 EVT_WDF_DEVICE_SELF_MANAGED_IO_INIT Fdo_EvtDeviceSelfManagedIoInit;
+
+void CheckHDAGraphicsRegistryKeys(PFDO_CONTEXT fdoCtx);
+
+NTSTATUS
+HDAGraphicsPowerInterfaceCallback(
+    PVOID NotificationStruct,
+    PVOID Context
+);
+
 NTSTATUS
 Fdo_Initialize(
     _In_ PFDO_CONTEXT FdoCtx
@@ -113,6 +122,8 @@ Fdo_Create(
         goto Exit;
     }
 
+    CheckHDAGraphicsRegistryKeys(fdoCtx);
+
 Exit:
     return status;
 }
@@ -151,6 +162,28 @@ Fdo_Initialize(
             "Error creating WDF interrupt object - %!STATUS!",
             status);
 
+        return status;
+    }
+    
+
+    status = WdfWaitLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &FdoCtx->GraphicsDevicesCollectionWaitLock);
+    if (!NT_SUCCESS(status))
+    {
+        SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_PNP,
+            "Error creating WDF wait lock - %!STATUS!",
+            status);
+
+        return status;
+    }
+    
+    status = WdfCollectionCreate(WDF_NO_OBJECT_ATTRIBUTES, &FdoCtx->GraphicsDevicesCollection);
+
+    if (!NT_SUCCESS(status))
+    {
+        SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_PNP,
+            "Error creating WDF collection - %!STATUS!",
+            status);
+        
         return status;
     }
 
@@ -263,6 +296,7 @@ Fdo_EvtDevicePrepareHardware(
             case HDA_ML_CAP_ID:
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                     "Found ML capability\n");
+                fdoCtx->mlcap = fdoCtx->m_BAR0.Base.baseptr + offset;
                 break;
 
             case HDA_GTS_CAP_ID:
@@ -307,6 +341,19 @@ Fdo_EvtDevicePrepareHardware(
             offset = cur_cap & HDA_CAP_HDR_NXT_PTR_MASK;
 
         } while (offset);
+    }
+    
+    if (fdoCtx->mlcap) {
+        IoRegisterPlugPlayNotification(
+            EventCategoryDeviceInterfaceChange,
+            PNPNOTIFY_DEVICE_INTERFACE_INCLUDE_EXISTING_INTERFACES,
+            (PVOID)&GUID_DEVINTERFACE_GRAPHICSPOWER,
+            WdfDriverWdmGetDriverObject(WdfDeviceGetDriver(fdoCtx->WdfDevice)),
+            HDAGraphicsPowerInterfaceCallback,
+            (PVOID)fdoCtx,
+            &fdoCtx->GraphicsNotificationHandle
+        );
+
     }
 
     status = GetHDACapabilities(fdoCtx);
@@ -436,6 +483,24 @@ Fdo_EvtDeviceReleaseHardware(
 
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
+
+    if (fdoCtx->GraphicsDevicesCollection) {
+        for (int i = 0; i < WdfCollectionGetCount(fdoCtx->GraphicsDevicesCollection); i++) {
+            WDFIOTARGET ioTarget = (WDFIOTARGET)WdfCollectionGetItem(fdoCtx->GraphicsDevicesCollection, i);
+            PGRAPHICSIOTARGET_CONTEXT ioTargetContext = GraphicsIoTarget_GetContext(ioTarget);
+
+            if (ioTargetContext->graphicsPowerRegisterOutput.DeviceHandle && ioTargetContext->graphicsPowerRegisterOutput.UnregisterCb) {
+                NTSTATUS status = ioTargetContext->graphicsPowerRegisterOutput.UnregisterCb(ioTargetContext->graphicsPowerRegisterOutput.DeviceHandle, fdoCtx);
+                if (!NT_SUCCESS(status)) {
+                    DbgPrint("Warning: unregister failed with status 0x%x\n", status);
+                }
+            }
+        }
+    }
+
+    if (fdoCtx->GraphicsNotificationHandle) {
+        IoUnregisterPlugPlayNotification(fdoCtx->GraphicsNotificationHandle);
+    }
 
     if (fdoCtx->nhlt)
         MmUnmapIoSpace(fdoCtx->nhlt, fdoCtx->nhltSz);

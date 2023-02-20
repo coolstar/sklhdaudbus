@@ -88,6 +88,19 @@ typedef struct _HDAC_RB {
     HDAC_CODEC_XFER xfer[HDA_MAX_CODECS];
 } HDAC_RB, *PHDAC_RB;
 
+typedef struct _GRAPHICSWORKITEM_CONTEXT {
+    struct _FDO_CONTEXT* FdoContext;
+    UNICODE_STRING GPUDeviceSymlink;
+} GRAPHICSWORKITEM_CONTEXT, *PGRAPHICSWORKITEM_CONTEXT;
+
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(GRAPHICSWORKITEM_CONTEXT, GraphicsWorkitem_GetContext)
+
+typedef struct _GRAPHICSIOTARGET_CONTEXT {
+    struct _FDO_CONTEXT* FdoContext;
+    DXGK_GRAPHICSPOWER_REGISTER_OUTPUT graphicsPowerRegisterOutput;
+} GRAPHICSIOTARGET_CONTEXT, *PGRAPHICSIOTARGET_CONTEXT;
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(GRAPHICSIOTARGET_CONTEXT, GraphicsIoTarget_GetContext)
+
 typedef struct _FDO_CONTEXT
 {
     WDFDEVICE WdfDevice;
@@ -101,7 +114,15 @@ typedef struct _FDO_CONTEXT
     BUS_INTERFACE_STANDARD BusInterface; //PCI Bus Interface
     WDFINTERRUPT Interrupt;
 
-    UINT8* ppcap;
+    //Graphics Notifications
+    PVOID GraphicsNotificationHandle;
+    WDFWAITLOCK GraphicsDevicesCollectionWaitLock;
+    WDFCOLLECTION GraphicsDevicesCollection;
+    ULONG GraphicsCodecAddress;
+    BOOLEAN UseSGPCCodec;
+
+    UINT8 *mlcap;
+    UINT8 *ppcap;
     UINT8 *spbcap;
 
     BOOLEAN ControllerEnabled;

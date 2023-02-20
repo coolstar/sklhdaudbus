@@ -41,6 +41,9 @@
     <ClCompile Include="sof-tplg.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="sgpc.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h">

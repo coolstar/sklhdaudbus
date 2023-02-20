@@ -8,6 +8,19 @@
 #pragma warning(disable:4214)  // suppress bit field types other than int warning
 #include <ntddk.h>
 #include <initguid.h>
+
+//SGPC (Win10 1809+ support)
+extern "C" {
+	#define __CPLUSPLUS
+
+	#include <windef.h>
+	#include <winerror.h>
+
+	#include <wingdi.h>
+	#include <d3dkmddi.h>
+	#include <d3dkmthk.h>
+}
+
 #include <wdm.h>
 #include <wdmguid.h>
 #include <wdf.h>
