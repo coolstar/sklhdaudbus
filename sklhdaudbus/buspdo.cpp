@@ -89,7 +89,8 @@ Return Value:
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "%s\n", __func__);
 
-    return (lhs->FdoContext == rhs->FdoContext) && (RtlCompareMemory(&lhs->CodecIds, &rhs->CodecIds, sizeof(lhs->CodecIds) == 0));
+    return (lhs->FdoContext == rhs->FdoContext) &&
+        (RtlCompareMemory(&lhs->CodecIds, &rhs->CodecIds, sizeof(lhs->CodecIds)) == sizeof(lhs->CodecIds));
 }
 
 VOID
@@ -226,12 +227,16 @@ Bus_CreatePdo(
         WdfDeviceInitSetDeviceType(DeviceInit, FILE_DEVICE_SOUND);
 
         PWCHAR prefix = L"HDAUDIO";
+        PWCHAR funcPrefix = L"";
+        if (Desc->CodecIds.IsGraphicsCodec) {
+            funcPrefix = L"SGPC_";
+        }
 
         //
         // Provide DeviceID, HardwareIDs, CompatibleIDs and InstanceId
         //
-        status = RtlUnicodeStringPrintf(&deviceId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X&SUBSYS_%08X&REV_%04X",
-            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.SubsysId, Desc->CodecIds.RevId);
+        status = RtlUnicodeStringPrintf(&deviceId, L"%s\\%sFUNC_%02X&VEN_%04X&DEV_%04X&SUBSYS_%08X&REV_%04X",
+            prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.SubsysId, Desc->CodecIds.RevId);
         if (!NT_SUCCESS(status)) {
             return status;
         }
@@ -250,8 +255,8 @@ Bus_CreatePdo(
         }
 
         //Add second hardware ID without Rev
-        status = RtlUnicodeStringPrintf(&deviceId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X&SUBSYS_%08X",
-            prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.SubsysId);
+        status = RtlUnicodeStringPrintf(&deviceId, L"%s\\%sFUNC_%02X&VEN_%04X&DEV_%04X&SUBSYS_%08X",
+            prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.SubsysId);
         if (!NT_SUCCESS(status)) {
             return status;
         }
@@ -263,11 +268,6 @@ Bus_CreatePdo(
 
         //Add Compatible Ids
         {
-            PWCHAR funcPrefix = L"";
-            if (Desc->CodecIds.IsGraphicsCodec) {
-                funcPrefix = L"SGPC_";
-            }
-
             status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X&DEV_%04X&REV_%04X",
                 prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
             if (!NT_SUCCESS(status)) {

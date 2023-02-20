@@ -354,6 +354,10 @@ static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
 				codecXfer->xfer[0]->Input.Response = rirb.response;
 				codecXfer->xfer[0]->Input.IsValid = 1;
 			}
+			else {
+				SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
+					"Got response 0x%x but no xfer!\n", rirb.response);
+			}
 			
 			RtlMoveMemory(&codecXfer->xfer[0], &codecXfer->xfer[1], sizeof(PHDAUDIO_CODEC_TRANSFER) * (HDA_MAX_CORB_ENTRIES - 1));
 			codecXfer->xfer[HDA_MAX_CORB_ENTRIES - 1] = NULL;

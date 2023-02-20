@@ -342,19 +342,6 @@ Fdo_EvtDevicePrepareHardware(
 
         } while (offset);
     }
-    
-    if (fdoCtx->mlcap) {
-        IoRegisterPlugPlayNotification(
-            EventCategoryDeviceInterfaceChange,
-            PNPNOTIFY_DEVICE_INTERFACE_INCLUDE_EXISTING_INTERFACES,
-            (PVOID)&GUID_DEVINTERFACE_GRAPHICSPOWER,
-            WdfDriverWdmGetDriverObject(WdfDeviceGetDriver(fdoCtx->WdfDevice)),
-            HDAGraphicsPowerInterfaceCallback,
-            (PVOID)fdoCtx,
-            &fdoCtx->GraphicsNotificationHandle
-        );
-
-    }
 
     status = GetHDACapabilities(fdoCtx);
     if (!NT_SUCCESS(status)) {
@@ -485,7 +472,7 @@ Fdo_EvtDeviceReleaseHardware(
         "%s\n", __func__);
 
     if (fdoCtx->GraphicsDevicesCollection) {
-        for (int i = 0; i < WdfCollectionGetCount(fdoCtx->GraphicsDevicesCollection); i++) {
+        for (ULONG i = 0; i < WdfCollectionGetCount(fdoCtx->GraphicsDevicesCollection); i++) {
             WDFIOTARGET ioTarget = (WDFIOTARGET)WdfCollectionGetItem(fdoCtx->GraphicsDevicesCollection, i);
             PGRAPHICSIOTARGET_CONTEXT ioTargetContext = GraphicsIoTarget_GetContext(ioTarget);
 
@@ -607,10 +594,12 @@ Fdo_EvtDeviceD0EntryPostInterrupts(
 
 #if ENABLE_HDA
     for (UINT8 addr = 0; addr < HDA_MAX_CODECS; addr++) {
+        KeInitializeEvent(&fdoCtx->rirb.xferEvent[addr], NotificationEvent, FALSE);
         if (((fdoCtx->codecMask >> addr) & 0x1) == 0)
             continue;
 
-        KeInitializeEvent(&fdoCtx->rirb.xferEvent[addr], NotificationEvent, FALSE);
+        if (fdoCtx->UseSGPCCodec && fdoCtx->GraphicsCodecAddress == addr)
+            continue;
 
         UINT32 cmdTmpl = (addr << 28) | (AC_NODE_ROOT << 20) |
             (AC_VERB_PARAMETERS << 8);
@@ -762,6 +751,19 @@ Fdo_EvtDeviceSelfManagedIoInit(
             continue;
 
         Fdo_EnumerateCodec(fdoCtx, addr);
+    }
+
+    if (fdoCtx->mlcap) {
+        IoRegisterPlugPlayNotification(
+            EventCategoryDeviceInterfaceChange,
+            PNPNOTIFY_DEVICE_INTERFACE_INCLUDE_EXISTING_INTERFACES,
+            (PVOID)&GUID_DEVINTERFACE_GRAPHICSPOWER,
+            WdfDriverWdmGetDriverObject(WdfDeviceGetDriver(fdoCtx->WdfDevice)),
+            HDAGraphicsPowerInterfaceCallback,
+            (PVOID)fdoCtx,
+            &fdoCtx->GraphicsNotificationHandle
+        );
+
     }
 #endif
 

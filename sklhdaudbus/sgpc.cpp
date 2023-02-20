@@ -3,7 +3,8 @@
 NTSTATUS HDAGraphics_EvtIoTargetQueryRemove(
     WDFIOTARGET ioTarget
 ) {
-    DbgPrint("Device Removal Notification\n");
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "Device Removal Notification\n");
 
     WdfIoTargetCloseForQueryRemove(ioTarget);
     return STATUS_SUCCESS;
@@ -14,14 +15,16 @@ void HDAGraphics_EvtIoTargetRemoveCanceled(
 ) {
     WDF_IO_TARGET_OPEN_PARAMS openParams;
     NTSTATUS status;
-    DbgPrint("Device Removal Cancel\n");
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "Device Removal Cancel\n");
 
     WDF_IO_TARGET_OPEN_PARAMS_INIT_REOPEN(&openParams);
 
     status = WdfIoTargetOpen(ioTarget, &openParams);
 
     if (!NT_SUCCESS(status)) {
-        KdPrint(("WdfIoTargetOpen failed 0x%x\n", status));
+        SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+            "WdfIoTargetOpen failed 0x%x\n", status);
         WdfObjectDelete(ioTarget);
         return;
     }
@@ -31,7 +34,8 @@ void HDAGraphics_EvtIoTargetRemoveComplete(
     WDFIOTARGET ioTarget
 ) {
     PFDO_CONTEXT fdoCtx;
-    DbgPrint("Device Removal Complete\n");
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "Device Removal Complete\n");
 
     PGRAPHICSIOTARGET_CONTEXT ioTargetContext;
     ioTargetContext = GraphicsIoTarget_GetContext(ioTarget);
@@ -69,6 +73,52 @@ void HDAGraphicsPowerRemovalNotificationCallback(
     //No-Op
 }
 
+void
+Fdo_EnumerateCodec(
+    PFDO_CONTEXT fdoCtx,
+    UINT8 addr
+);
+
+void EjectGraphicsCodec(PFDO_CONTEXT fdoCtx) {
+    if (!fdoCtx->UseSGPCCodec) {
+        return;
+    }
+
+    if (!fdoCtx->codecs[fdoCtx->GraphicsCodecAddress])
+        return;
+    
+    PDO_IDENTIFICATION_DESCRIPTION description;//
+    // Initialize the description with the information about the detected codec.
+    //
+    WDF_CHILD_IDENTIFICATION_DESCRIPTION_HEADER_INIT(
+        &description.Header,
+        sizeof(description)
+    );
+
+    description.FdoContext = fdoCtx;
+    RtlCopyMemory(&description.CodecIds, &fdoCtx->codecs[fdoCtx->GraphicsCodecAddress]->CodecIds, sizeof(description.CodecIds));
+
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "Ejecting Gfx Codec\n");
+
+    WdfInterruptAcquireLock(fdoCtx->Interrupt);
+
+    WdfChildListUpdateChildDescriptionAsMissing(WdfFdoGetDefaultChildList(fdoCtx->WdfDevice), &description.Header);
+    fdoCtx->codecs[fdoCtx->GraphicsCodecAddress]->FdoContext = NULL;
+
+    WdfInterruptReleaseLock(fdoCtx->Interrupt);
+
+}
+
+void EnumerateGraphicsCodec(PFDO_CONTEXT fdoCtx) {
+    if (!fdoCtx->UseSGPCCodec) {
+        return;
+    }
+    SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+        "Enumerating Gfx Codec\n");
+    Fdo_EnumerateCodec(fdoCtx, (UINT8)fdoCtx->GraphicsCodecAddress);
+}
+
 void HDAGraphicsPowerFStateNotificationCallback(
     PVOID GraphicsDeviceHandle,
     ULONG ComponentIndex,
@@ -77,24 +127,22 @@ void HDAGraphicsPowerFStateNotificationCallback(
     PVOID PrivateHandle
 ) {
     PFDO_CONTEXT fdoCtx = (PFDO_CONTEXT)PrivateHandle;
-    DbgPrint("%s 0x%x\n", __func__, ComponentIndex);
-
+    UNREFERENCED_PARAMETER(GraphicsDeviceHandle);
+    UNREFERENCED_PARAMETER(ComponentIndex);
     if (NewFState) {
-        DbgPrint("Fx State\n");
         if (PreNotification) {
-
+            EjectGraphicsCodec(fdoCtx);
         }
         else {
 
         }
     }
     else {
-        DbgPrint("F0 State\n");
         if (PreNotification) {
 
         }
         else {
-
+            EnumerateGraphicsCodec(fdoCtx);
         }
     }
 }
@@ -108,15 +156,17 @@ void HDAGraphicsPowerInitialComponentStateCallback( //https://learn.microsoft.co
     GUID ComponentGuid,
     UINT PowerComponentMappingFlag
 ) {
+    UNREFERENCED_PARAMETER(GraphicsDeviceHandle);
+    UNREFERENCED_PARAMETER(ComponentIndex);
+    UNREFERENCED_PARAMETER(IsBlockingType);
+    UNREFERENCED_PARAMETER(ComponentGuid);
     PFDO_CONTEXT fdoCtx = (PFDO_CONTEXT)PrivateHandle;
-    DbgPrint("%s 0x%x\n", __func__, ComponentIndex);
     if (PowerComponentMappingFlag) {
     }
     else {
         if (InitialFState) {
-            DbgPrint("Fx State\n");
         } else {
-            DbgPrint("F0 State\n");
+            EnumerateGraphicsCodec(fdoCtx);
         }
     }
 }
@@ -135,7 +185,8 @@ void HDAGraphicsPowerInterfaceAdd(WDFWORKITEM WorkItem) {
 
     NTSTATUS status = WdfIoTargetCreate(fdoCtx->WdfDevice, &attributes, &ioTarget);
     if (!NT_SUCCESS(status)) {
-        DbgPrint("WdfIoTargetCreate failed 0x%x\n", status);
+        SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+            "WdfIoTargetCreate failed 0x%x\n", status);
         goto exit;
     }
 
@@ -154,7 +205,8 @@ void HDAGraphicsPowerInterfaceAdd(WDFWORKITEM WorkItem) {
     status = WdfIoTargetOpen(ioTarget, &openParams);
 
     if (!NT_SUCCESS(status)) {
-        DbgPrint("WdfIoTargetOpen failed with status 0x%x\n", status);
+        SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+            "WdfIoTargetOpen failed with status 0x%x\n", status);
         WdfObjectDelete(ioTarget);
         goto exit;
     }
@@ -163,7 +215,8 @@ void HDAGraphicsPowerInterfaceAdd(WDFWORKITEM WorkItem) {
     WdfCollectionAdd(fdoCtx->GraphicsDevicesCollection, ioTarget);
     WdfWaitLockRelease(fdoCtx->GraphicsDevicesCollectionWaitLock);
 
-    DXGK_GRAPHICSPOWER_REGISTER_INPUT graphicsPowerRegisterInput = { 0 };
+    DXGK_GRAPHICSPOWER_REGISTER_INPUT graphicsPowerRegisterInput;
+    graphicsPowerRegisterInput = { 0 };
     graphicsPowerRegisterInput.Version = DXGK_GRAPHICSPOWER_VERSION;
     graphicsPowerRegisterInput.PrivateHandle = fdoCtx;
     graphicsPowerRegisterInput.PowerNotificationCb = HDAGraphicsPowerNotificationCallback;
@@ -182,7 +235,8 @@ void HDAGraphicsPowerInterfaceAdd(WDFWORKITEM WorkItem) {
         IOCTL_INTERNAL_GRAPHICSPOWER_REGISTER,
         &inputDescriptor, &outputDescriptor, NULL, NULL);
     if (!NT_SUCCESS(status)) {
-        DbgPrint("IOCTL_INTERNAL_GRAPHICSPOWER_REGISTER failed with status 0x%x\n", status);
+        SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+            "IOCTL_INTERNAL_GRAPHICSPOWER_REGISTER failed with status 0x%x\n", status);
         goto exit;
     }
 
@@ -204,7 +258,8 @@ HDAGraphicsPowerInterfaceCallback(
     }
 
     if (IsEqualGUID(devNotificationStruct->Event, GUID_DEVICE_INTERFACE_ARRIVAL)) {
-        DbgPrint("Graphics Arrival Notification!\n");
+        SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+            "Graphics Arrival Notification!\n");
 
         status = RtlUnicodeStringValidate(devNotificationStruct->SymbolicLinkName);
         if (!NT_SUCCESS(status)) {
