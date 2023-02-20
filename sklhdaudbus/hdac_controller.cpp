@@ -233,8 +233,8 @@ NTSTATUS SendHDACmds(PFDO_CONTEXT fdoCtx, ULONG count, PHDAUDIO_CODEC_TRANSFER C
 			return STATUS_RETRY;
 		}
 
-		fdoCtx->rirb.xfer[addr].xfer[fdoCtx->rirb.cmds[addr]] = transfer;
-		InterlockedIncrement(&fdoCtx->rirb.cmds[addr]);
+		LONG oldVal = InterlockedIncrement(&fdoCtx->rirb.cmds[addr]);
+		fdoCtx->rirb.xfer[addr].xfer[oldVal - 1] = transfer;
 
 		fdoCtx->corb.buf[wp] = transfer->Output.Command;
 
@@ -272,7 +272,9 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 		UINT16 addr = HDACommandAddr(transfer.Output.Command);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
+			WdfInterruptAcquireLock(fdoCtx->Interrupt);
 			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
+			WdfInterruptReleaseLock(fdoCtx->Interrupt);
 			return STATUS_IO_TIMEOUT;
 		}
 
@@ -346,7 +348,7 @@ static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
 
 			fdoCtx->processUnsol = TRUE;
 		}
-		else if (fdoCtx->rirb.cmds[addr]) {
+		else if (InterlockedAdd(&fdoCtx->rirb.cmds[addr], 0)) {
 			PHDAC_CODEC_XFER codecXfer = &fdoCtx->rirb.xfer[addr];
 			if (codecXfer->xfer[0]) {
 				SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
