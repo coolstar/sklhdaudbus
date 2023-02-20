@@ -11,6 +11,8 @@ typedef struct _CODEC_UNSOLIT_CALLBACK {
 
 typedef struct _CODEC_IDS {
     UINT32 CodecAddress;
+    BOOL IsGraphicsCodec;
+
     UINT8 FunctionGroupStartNode;
 
     UINT16 CtlrDevId;

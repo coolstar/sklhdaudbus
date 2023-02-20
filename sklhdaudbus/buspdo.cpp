@@ -263,8 +263,13 @@ Bus_CreatePdo(
 
         //Add Compatible Ids
         {
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X&DEV_%04X&REV_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
+            PWCHAR funcPrefix = L"";
+            if (Desc->CodecIds.IsGraphicsCodec) {
+                funcPrefix = L"SGPC_";
+            }
+
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X&DEV_%04X&REV_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -274,8 +279,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&VEN_%04X&DEV_%04X&REV_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&VEN_%04X&DEV_%04X&REV_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -285,8 +290,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X&REV_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&VEN_%04X&DEV_%04X&REV_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId, Desc->CodecIds.RevId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -296,8 +301,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X&DEV_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X&DEV_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -307,8 +312,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&VEN_%04X&DEV_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&VEN_%04X&DEV_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -318,8 +323,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&VEN_%04X&DEV_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&VEN_%04X&DEV_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId, Desc->CodecIds.DevId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -329,8 +334,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X&VEN_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId, Desc->CodecIds.VenId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -340,8 +345,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&VEN_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&VEN_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.VenId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -351,8 +356,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&VEN_%04X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&VEN_%04X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.VenId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -362,8 +367,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X&CTLR_DEV_%02X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId, Desc->CodecIds.CtlrDevId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -373,8 +378,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X&CTLR_VEN_%02X",
-                prefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X&CTLR_VEN_%02X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId, Desc->CodecIds.CtlrVenId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -384,8 +389,8 @@ Bus_CreatePdo(
                 return status;
             }
 
-            status = RtlUnicodeStringPrintf(&compatId, L"%s\\FUNC_%02X",
-                prefix, Desc->CodecIds.FuncId);
+            status = RtlUnicodeStringPrintf(&compatId, L"%s\\%sFUNC_%02X",
+                prefix, funcPrefix, Desc->CodecIds.FuncId);
             if (!NT_SUCCESS(status)) {
                 return status;
             }
@@ -473,8 +478,8 @@ Bus_CreatePdo(
     //
     WDF_DEVICE_PNP_CAPABILITIES_INIT(&pnpCaps);
     pnpCaps.Removable = WdfFalse;
-    pnpCaps.EjectSupported = WdfFalse;
-    pnpCaps.SurpriseRemovalOK = WdfFalse;
+    pnpCaps.EjectSupported = Desc->CodecIds.IsGraphicsCodec ? WdfTrue : WdfFalse;
+    pnpCaps.SurpriseRemovalOK = Desc->CodecIds.IsGraphicsCodec ? WdfTrue : WdfFalse;
 
     pnpCaps.Address = Desc->CodecIds.CodecAddress;
     pnpCaps.UINumber = Desc->CodecIds.CodecAddress;
