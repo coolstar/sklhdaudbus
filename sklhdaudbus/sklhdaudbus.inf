@@ -31,6 +31,15 @@ DefaultDestDir = 12
 [SourceDisksFiles]
 sklhdaudbus.sys  = 1,,
 
+[SignatureAttributes]
+sklhdaudbus.sys=SignatureAttributes.DRM
+
+[SignatureAttributes.DRM]
+DRMLevel=1300
+
+[SignatureAttributes.PETrust]
+PETrust=true
+
 ;*****************************************
 ; SklHDAudBus  Install Section
 ;*****************************************
