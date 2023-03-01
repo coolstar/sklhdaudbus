@@ -22,9 +22,14 @@ NTSTATUS HDA_TransferCodecVerbs(
 
 	PFDO_CONTEXT fdoCtx = devData->FdoContext;
 
-	status = SendHDACmds(fdoCtx, Count, CodecTransfer);
+	status = WdfDeviceStopIdle(devData->FdoContext->WdfDevice, TRUE);
 	if (!NT_SUCCESS(status)) {
 		return status;
+	}
+
+	status = SendHDACmds(fdoCtx, Count, CodecTransfer);
+	if (!NT_SUCCESS(status)) {
+		goto out;
 	}
 
 	UINT16 codecAddr = (UINT16)devData->CodecIds.CodecAddress;
@@ -50,7 +55,8 @@ NTSTATUS HDA_TransferCodecVerbs(
 			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], Count - TransferredCount);
 
 			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s timeout (Count: %d, transferred %d)!\n", __func__, Count, TransferredCount);
-			return STATUS_IO_TIMEOUT;
+			status = STATUS_IO_TIMEOUT;
+			goto out;
 		}
 
 		LARGE_INTEGER Timeout;
@@ -64,7 +70,12 @@ NTSTATUS HDA_TransferCodecVerbs(
 		DbgPrint("Got Callback\n");
 		Callback(CodecTransfer, Context);
 	}
-	return STATUS_SUCCESS;
+
+	status = STATUS_SUCCESS;
+
+out:
+	WdfDeviceResumeIdle(fdoCtx->WdfDevice);
+	return status;
 }
 
 NTSTATUS HDA_AllocateCaptureDmaEngine(
@@ -86,6 +97,11 @@ NTSTATUS HDA_AllocateCaptureDmaEngine(
 	}
 
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
+
+	NTSTATUS status = WdfDeviceStopIdle(devData->FdoContext->WdfDevice, TRUE);
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	for (UINT32 i = 0; i < fdoContext->captureStreams; i++) {
@@ -109,6 +125,7 @@ NTSTATUS HDA_AllocateCaptureDmaEngine(
 	}
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	WdfDeviceResumeIdle(devData->FdoContext->WdfDevice);
 	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
@@ -129,6 +146,11 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 	}
 
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
+
+	NTSTATUS status = WdfDeviceStopIdle(devData->FdoContext->WdfDevice, TRUE);
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	for (UINT32 i = 0; i < fdoContext->playbackStreams; i++) {
@@ -153,6 +175,7 @@ NTSTATUS HDA_AllocateRenderDmaEngine(
 	}
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	WdfDeviceResumeIdle(devData->FdoContext->WdfDevice);
 	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
@@ -222,6 +245,8 @@ NTSTATUS HDA_FreeDmaEngine(
 
 	stream->PdoContext = NULL;
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	WdfDeviceResumeIdle(devData->FdoContext->WdfDevice);
 
 	return STATUS_SUCCESS;
 }
