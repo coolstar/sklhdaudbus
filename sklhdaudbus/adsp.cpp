@@ -41,6 +41,23 @@ NTSTATUS ADSPGetResources(_In_ PVOID _context, _PCI_BAR* hdaBar, _PCI_BAR* adspB
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS ADSPSetPowerState(_In_ PVOID _context, _In_ DEVICE_POWER_STATE powerState) {
+	if (!_context)
+		return STATUS_NO_SUCH_DEVICE;
+
+	PPDO_DEVICE_DATA devData = (PPDO_DEVICE_DATA)_context;
+	if (!devData->FdoContext) {
+		return STATUS_NO_SUCH_DEVICE;
+	}
+
+	NTSTATUS status = STATUS_SUCCESS;
+	if (powerState == PowerDeviceD3) {
+		WdfDeviceResumeIdle(devData->FdoContext->WdfDevice);
+	} else if (powerState == PowerDeviceD0) {
+		status = WdfDeviceStopIdle(devData->FdoContext->WdfDevice, TRUE);
+	}
+	return status;
+}
 
 NTSTATUS ADSPRegisterInterrupt(_In_ PVOID _context, _In_ PADSP_INTERRUPT_CALLBACK callback, _In_ PVOID callbackContext) {
 	if (!_context)
@@ -81,6 +98,11 @@ NTSTATUS ADSPGetRenderStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFo
 
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
 
+	NTSTATUS status = WdfDeviceStopIdle(devData->FdoContext->WdfDevice, TRUE);
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
+
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	for (UINT32 i = 0; i < fdoContext->playbackStreams; i++) {
 		int tag = fdoContext->playbackIndexOff + i;
@@ -112,6 +134,7 @@ NTSTATUS ADSPGetRenderStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamFo
 	}
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	WdfDeviceResumeIdle(devData->FdoContext->WdfDevice);
 	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
@@ -125,6 +148,11 @@ NTSTATUS ADSPGetCaptureStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamF
 	}
 
 	PFDO_CONTEXT fdoContext = devData->FdoContext;
+
+	NTSTATUS status = WdfDeviceStopIdle(devData->FdoContext->WdfDevice, TRUE);
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 	for (UINT32 i = 0; i < fdoContext->captureStreams; i++) {
@@ -157,6 +185,7 @@ NTSTATUS ADSPGetCaptureStream(_In_ PVOID _context, HDAUDIO_STREAM_FORMAT StreamF
 	}
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	WdfDeviceResumeIdle(devData->FdoContext->WdfDevice);
 	return STATUS_INSUFFICIENT_RESOURCES;
 }
 
@@ -194,6 +223,7 @@ NTSTATUS ADSPFreeStream(
 
 	stream->PdoContext = NULL;
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+	WdfDeviceResumeIdle(devData->FdoContext->WdfDevice);
 
 	return STATUS_SUCCESS;
 }
@@ -352,6 +382,7 @@ ADSP_BUS_INTERFACE ADSP_BusInterface(PVOID Context) {
 	busInterface.InterfaceDereference = WdfDeviceInterfaceDereferenceNoOp;
 	busInterface.CtlrDevId = devData->CodecIds.CtlrDevId;
 	busInterface.GetResources = ADSPGetResources;
+	busInterface.SetDSPPowerState = ADSPSetPowerState;
 	busInterface.RegisterInterrupt = ADSPRegisterInterrupt;
 	busInterface.UnregisterInterrupt = ADSPUnregisterInterrupt;
 
