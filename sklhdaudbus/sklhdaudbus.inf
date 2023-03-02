@@ -50,8 +50,6 @@ PETrust=true
 ; Decorated model section take precedence over undecorated 
 ; ones on XP and later.
 [Standard.NT$ARCH$]
-%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_2668&CC_0403 ;Test in QEMU
-%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_15AD&DEV_1977&CC_0403 ;Test in VMWare
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_9D70&CC_0401 ;Intel Skylake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_9D71&CC_0401 ;Intel Kaby Lake
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_5A98&CC_0401 ;Intel Apollo Lake
