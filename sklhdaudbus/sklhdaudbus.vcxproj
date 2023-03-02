@@ -152,6 +152,7 @@
     <ClInclude Include="hda_verbs.h" />
     <ClInclude Include="nhlt.h" />
     <ClInclude Include="regfuncs.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="sof-tplg.h" />
     <ClInclude Include="trace.h" />
   </ItemGroup>
@@ -166,6 +167,9 @@
     <ClCompile Include="sgpc.cpp" />
     <ClCompile Include="sklhdaudbus.cpp" />
     <ClCompile Include="sof-tplg.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="sklhdaudbus.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

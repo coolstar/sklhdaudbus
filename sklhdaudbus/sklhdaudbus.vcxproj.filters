@@ -82,5 +82,9 @@
     <ClInclude Include="sof-tplg.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="sklhdaudbus.rc" />
   </ItemGroup>
 </Project>
