@@ -5,6 +5,7 @@ HD Audio Bus Driver for Intel Skylake and newer
 	* Compatible with Windows default codec driver (QEMU / VMWare)
 	* Compatible with Intel Display Audio driver (Intel Lakes, and Intel Haswell / Broadwell)
 	* Compatible with Realtek ALC283 driver (Intel Haswell / Broadwell)
+   	* Compatible with NVIDIA RTX 3070 (HDMI Audio)
 * Support accessing AudioDSP on Intel platforms
 * Compatible with csaudiosstavs and csaudiointcsof
 * Working Sleep / Wake
