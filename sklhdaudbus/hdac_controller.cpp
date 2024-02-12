@@ -249,6 +249,9 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 	HDAUDIO_CODEC_TRANSFER transfer = { 0 };
 	transfer.Output.Command = val;
 
+	SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
+		"%s: Called. Command: 0x%x\n", __func__, val);
+
 	NTSTATUS status = SendHDACmds(fdoCtx, 1, &transfer);
 	if (!NT_SUCCESS(status)) {
 		return status;
@@ -275,6 +278,8 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 			WdfInterruptAcquireLock(fdoCtx->Interrupt);
 			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
 			WdfInterruptReleaseLock(fdoCtx->Interrupt);
+			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
+				"%s: Timed out waiting for response\n", __func__);
 			return STATUS_IO_TIMEOUT;
 		}
 
