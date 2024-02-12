@@ -52,7 +52,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 		KeQuerySystemTime(&CurrentTime);
 
 		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], Count - TransferredCount);
+			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], TransferredCount - Count);
 
 			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s timeout (Count: %d, transferred %d)!\n", __func__, Count, TransferredCount);
 			status = STATUS_IO_TIMEOUT;
