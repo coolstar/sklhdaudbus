@@ -104,7 +104,7 @@ void EjectGraphicsCodec(PFDO_CONTEXT fdoCtx) {
     WdfInterruptAcquireLock(fdoCtx->Interrupt);
 
     WdfChildListUpdateChildDescriptionAsMissing(WdfFdoGetDefaultChildList(fdoCtx->WdfDevice), &description.Header);
-    fdoCtx->codecs[fdoCtx->GraphicsCodecAddress]->FdoContext = NULL;
+    //Don't null FdoContext to allow SGPC Audio driver to unregister callbacks / events and cleanup
 
     WdfInterruptReleaseLock(fdoCtx->Interrupt);
 
