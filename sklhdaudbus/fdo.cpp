@@ -445,7 +445,7 @@ Fdo_EvtDevicePrepareHardware(
         SOF_TPLG sofTplg = { 0 };
         NTSTATUS status2 = GetSOFTplg(Device, &sofTplg);
         if (NT_SUCCESS(status2) && sofTplg.magic == SOFTPLG_MAGIC) {
-            fdoCtx->sofTplg = ExAllocatePoolWithTag(NonPagedPool, sofTplg.length, SKLHDAUDBUS_POOL_TAG);
+            fdoCtx->sofTplg = ExAllocatePoolZero(NonPagedPool, sofTplg.length, SKLHDAUDBUS_POOL_TAG);
             RtlCopyMemory(fdoCtx->sofTplg, &sofTplg, sofTplg.length);
             fdoCtx->sofTplgSz = sofTplg.length;
         }
