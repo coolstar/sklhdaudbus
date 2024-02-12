@@ -61,6 +61,8 @@ PETrust=true
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CC&CC_0401 ;Intel Alder Lake-M
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_54C8&CC_0401 ;Intel Alder Lake-N
 %SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_51CA&CC_0401 ;Intel Raptor Lake-P
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_7E28&CC_0401 ;Intel Meteor Lake-P
+%SklHDAudBus.DeviceDesc%=SklHDAudBus_Device, PCI\VEN_8086&DEV_7728&CC_0401 ;Intel Arrow Lake-P
 
 [SklHDAudBus_Device.NT]
 CopyFiles=Drivers_Dir
