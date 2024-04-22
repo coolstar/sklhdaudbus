@@ -69,6 +69,8 @@ CopyFiles=Drivers_Dir
 
 [SklHDAudBus_Device.NT.HW]
 AddReg=SklHDAudBus_AddReg
+Include=pci.inf
+Needs=PciD3ColdSupported.HW
 
 [Drivers_Dir]
 sklhdaudbus.sys
