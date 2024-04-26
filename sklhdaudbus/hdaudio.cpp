@@ -302,7 +302,7 @@ VOID HDA_GetWallClockRegister(
 		*Wallclock = NULL;
 		return;
 	}
-	*Wallclock = (ULONG *)((devData->FdoContext)->m_BAR0.Base.baseptr + HDA_REG_WALLCLK);
+	*Wallclock = (ULONG *)((devData->FdoContext)->m_BAR0.Base.baseptr + HDA_REG_WALLCLKA);
 }
 
 NTSTATUS HDA_GetLinkPositionRegister(
@@ -320,7 +320,10 @@ NTSTATUS HDA_GetLinkPositionRegister(
 		return STATUS_INVALID_HANDLE;
 	}
 
-	*Position = (ULONG *)stream->posbuf;
+	if (devData->CodecIds.CtlrVenId != VEN_INTEL) //Experimental Non-Intel support
+		*Position = (ULONG*)(stream->sdAddr + HDA_REG_SD_LPIBA);
+	else
+		*Position = (ULONG *)stream->posbuf; //Use Posbuf for all Intel
 
 	return STATUS_SUCCESS;
 }

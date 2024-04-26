@@ -23,6 +23,7 @@
 #define HDA_REG_INTCTL			0x20
 #define HDA_REG_INTSTS			0x24
 #define HDA_REG_WALLCLK			0x30	/* 24Mhz source */
+#define HDA_REG_WALLCLKA		0x2030	/* 24Mhz source */
 #define HDA_REG_OLD_SSYNC		0x34	/* SSYNC for old ICH */
 #define HDA_REG_SSYNC			0x38
 #define HDA_REG_CORBLBASE		0x40
@@ -77,6 +78,7 @@ enum { SDI0, SDI1, SDI2, SDI3, SDO0, SDO1, SDO2, SDO3 };
 #define HDA_REG_SD_FIFOL		0x14
 #define HDA_REG_SD_BDLPL		0x18
 #define HDA_REG_SD_BDLPU		0x1c
+#define HDA_REG_SD_LPIBA		0x2004
 
 /* GTS registers */
 #define HDA_REG_LLCH			0x14
