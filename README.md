@@ -1,7 +1,7 @@
 HD Audio Bus Driver for Intel Skylake and newer
 
 * Exposes HD Audio devices
-	* Compatible with VMWare, QEMU, and Intel Skylake / Kaby Lake / Apollo Lake / Gemini Lake / Comet Lake / Tiger Lake / Jasper Lake / Alder Lake
+	* Compatible with VMWare, QEMU, and Intel Skylake / Kaby Lake / Apollo Lake / Gemini Lake / Comet Lake / Tiger Lake / Jasper Lake / Alder Lake(-N) / Raptor Lake
 	* Compatible with Windows default codec driver (QEMU / VMWare)
 	* Compatible with Intel Display Audio driver (Intel Lakes, and Intel Haswell / Broadwell)
 	* Compatible with Realtek ALC283 driver (Intel Haswell / Broadwell)
