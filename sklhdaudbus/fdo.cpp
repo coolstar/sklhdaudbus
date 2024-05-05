@@ -626,7 +626,10 @@ Fdo_EvtDeviceD0EntryPostInterrupts(
         ULONG vendorDevice;
         if (!NT_SUCCESS(RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice))) { //Some codecs might need a kickstart
             //First attempt failed. Retry
-            status = RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice); //If this fails, something is wrong.
+            NTSTATUS status2 = RunSingleHDACmd(fdoCtx, cmdTmpl | AC_PAR_VENDOR_ID, &vendorDevice); //If this fails, something is wrong.
+            if (!NT_SUCCESS(status2)) {
+                DbgPrint("Warning: Failed to wake up codec %d: 0x%x", addr, status2);
+            }
         }
     }
 #endif
