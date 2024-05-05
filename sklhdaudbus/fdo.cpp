@@ -557,6 +557,11 @@ Fdo_EvtDeviceD0Entry(
         val = val & ~INTEL_HDA_CGCTL_MISCBDCGE;
         pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
     }
+    else if (fdoCtx->venId == VEN_NVIDIA) {
+        update_pci_byte(&fdoCtx->BusInterface, NVIDIA_HDA_TRANSREG_ADDR, 0x0f, NVIDIA_HDA_ENABLE_COHBIT);
+        update_pci_byte(&fdoCtx->BusInterface, NVIDIA_HDA_ISTRM_COH, 0x01, NVIDIA_HDA_ENABLE_COHBIT);
+        update_pci_byte(&fdoCtx->BusInterface, NVIDIA_HDA_OSTRM_COH, 0x01, NVIDIA_HDA_ENABLE_COHBIT);
+    }
 
     //Reset unsolicited queue
     RtlZeroMemory(&fdoCtx->unsol_queue, sizeof(fdoCtx->unsol_queue));
