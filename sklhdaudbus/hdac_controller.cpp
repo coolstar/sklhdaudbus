@@ -75,9 +75,8 @@ NTSTATUS GetHDACapabilities(PFDO_CONTEXT fdoCtx) {
 		"chipset global capabilities = 0x%x\n", gcap);
 
 	fdoCtx->is64BitOK = (gcap & 0x1);
-	if (!fdoCtx->is64BitOK) {
-		return STATUS_DEVICE_PROTOCOL_ERROR; //64 bit required
-	}
+	SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
+		"64 bit OK? %d\n", fdoCtx->is64BitOK);
 
 	fdoCtx->hwVersion = (hda_read8(fdoCtx, VMAJ) << 8) | hda_read8(fdoCtx, VMIN);
 

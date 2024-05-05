@@ -255,7 +255,7 @@ NTSTATUS ADSPPrepareDSP(
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
 	PHYSICAL_ADDRESS maxAddr;
-	maxAddr.QuadPart = MAXULONG64;
+	maxAddr.QuadPart = devData->FdoContext->is64BitOK ? MAXULONG64 : MAXULONG32;
 
 	stream->mdlBuf = NULL;
 	stream->bufSz = ByteSize;

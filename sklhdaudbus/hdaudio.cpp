@@ -472,7 +472,7 @@ NTSTATUS HDA_AllocateDmaBufferWithNotification(
 	PHYSICAL_ADDRESS zeroAddr;
 	zeroAddr.QuadPart = 0;
 	PHYSICAL_ADDRESS maxAddr;
-	maxAddr.QuadPart = MAXUINT64;
+	maxAddr.QuadPart = devData->FdoContext->is64BitOK ? MAXULONG64 : MAXULONG32;
 
 	UINT32 allocSize = (UINT32)RequestedBufferSize;
 	UINT32 allocOffset = 0;
