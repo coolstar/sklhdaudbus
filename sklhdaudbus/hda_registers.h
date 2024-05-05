@@ -302,3 +302,20 @@ enum { SDI0, SDI1, SDI2, SDI3, SDO0, SDO1, SDO2, SDO3 };
 #define INTEL_SCH_HDA_DEVC_NOSNOOP       (0x1<<11)
 
 #define HDA_VS_EM2_DUM			(1 << 23)
+
+/* Defines for ATI HD Audio support in SB450 south bridge */
+#define ATI_SB450_HDAUDIO_MISC_CNTR2_ADDR   0x42
+#define ATI_SB450_HDAUDIO_ENABLE_SNOOP      0x02
+
+/* Defines for Nvidia HDA support */
+#define NVIDIA_HDA_TRANSREG_ADDR      0x4e
+#define NVIDIA_HDA_ENABLE_COHBITS     0x0f
+#define NVIDIA_HDA_ISTRM_COH          0x4d
+#define NVIDIA_HDA_OSTRM_COH          0x4c
+#define NVIDIA_HDA_ENABLE_COHBIT      0x01
+
+/* Defines for Intel SCH HDA snoop control */
+#define INTEL_HDA_CGCTL	 0x48
+#define INTEL_HDA_CGCTL_MISCBDCGE        (0x1 << 6)
+#define INTEL_SCH_HDA_DEVC      0x78
+#define INTEL_SCH_HDA_DEVC_NOSNOOP       (0x1<<11)

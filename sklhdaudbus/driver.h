@@ -40,6 +40,9 @@ extern "C" {
 #define SKLHDAUDBUS_POOL_TAG 'SADH'
 
 #define VEN_INTEL 0x8086
+#define VEN_ATI 0x1002
+#define VEN_AMD 0x1022
+#define VEN_NVIDIA 0x10DE
 #define VEN_VMWARE 0x15AD
 
 #include "regfuncs.h"
