@@ -105,7 +105,7 @@ Fdo_Create(
         goto Exit;
     }
 
-    {
+    /*{
         WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS IdleSettings;
 
         WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&IdleSettings, IdleCannotWakeFromS0);
@@ -114,7 +114,7 @@ Fdo_Create(
         IdleSettings.UserControlOfIdleSettings = IdleDoNotAllowUserControl;
 
         WdfDeviceAssignS0IdleSettings(wdfDevice, &IdleSettings);
-    }
+    }*/
 
     {
         WDF_DEVICE_STATE deviceState;
