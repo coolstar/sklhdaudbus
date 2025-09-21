@@ -424,9 +424,9 @@ BOOLEAN hda_interrupt(
 		WdfInterruptQueueDpcForIsr(Interrupt);
 	}
 
-	status = hda_read16(fdoCtx, RIRBSTS);
+	status = hda_read8(fdoCtx, RIRBSTS);
 	if (status & RIRB_INT_MASK) {
-		hda_write16(fdoCtx, RIRBSTS, RIRB_INT_MASK);
+		hda_write8(fdoCtx, RIRBSTS, RIRB_INT_MASK);
 		if (status & RIRB_INT_RESPONSE) {
 			HDAFlushRIRB(fdoCtx);
 		}
