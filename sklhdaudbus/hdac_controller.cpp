@@ -428,7 +428,8 @@ BOOLEAN hda_interrupt(
 	if (status & RIRB_INT_MASK) {
 		hda_write8(fdoCtx, RIRBSTS, RIRB_INT_MASK);
 		if (status & RIRB_INT_RESPONSE) {
-			HDAFlushRIRB(fdoCtx);
+			fdoCtx->processRirb = TRUE;
+			WdfInterruptQueueDpcForIsr(Interrupt);
 		}
 	}
 
@@ -467,6 +468,11 @@ void hda_dpc(
 				}
 			}
 		}
+	}
+
+	if (fdoCtx->processRirb) {
+		fdoCtx->processRirb = FALSE;
+		HDAFlushRIRB(fdoCtx);
 	}
 
 	if (fdoCtx->processUnsol) {

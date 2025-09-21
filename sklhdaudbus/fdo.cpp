@@ -575,6 +575,7 @@ Fdo_EvtDeviceD0Entry(
     //Reset CORB / RIRB
     RtlZeroMemory(&fdoCtx->corb, sizeof(fdoCtx->corb));
     RtlZeroMemory(&fdoCtx->rirb, sizeof(fdoCtx->rirb));
+    fdoCtx->processRirb = FALSE;
 
     status = StartHDAController(fdoCtx);
 
