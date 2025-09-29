@@ -1,56 +1,38 @@
 #include "driver.h"
 
 NTSTATUS HDA_WaitForTransfer(
-	PPDO_DEVICE_DATA devData,
+	PFDO_CONTEXT fdoCtx,
+	UINT16 codecAddr,
 	_In_ ULONG Count,
 	_Inout_updates_(Count)
 	PHDAUDIO_CODEC_TRANSFER CodecTransfer
 ) {
-	if (!devData->FdoContext) {
-		return STATUS_NO_SUCH_DEVICE;
-	}
-
-	PFDO_CONTEXT fdoCtx = devData->FdoContext;
-
-	UINT16 codecAddr = (UINT16)devData->CodecIds.CodecAddress;
-
 	NTSTATUS status = STATUS_SUCCESS;
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, Count);
 
-	int timeout_ms = 1000;
-	LARGE_INTEGER StartTime;
-	KeQuerySystemTime(&StartTime);
-	for (ULONG loopcounter = 0; ; loopcounter++) {
-		ULONG TransferredCount = 0;
-		for (ULONG i = 0; i < Count; i++) {
-			if (CodecTransfer[i].Input.IsValid) {
-				TransferredCount++;
-			}
+	LARGE_INTEGER Timeout;
+	Timeout.QuadPart = -10 * 1000 * 1000;
+	KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
+	KeClearEvent(&fdoCtx->rirb.xferEvent[codecAddr]);
+
+	ULONG TransferredCount = 0;
+	for (ULONG i = 0; i < Count; i++) {
+		if (CodecTransfer[i].Input.IsValid) {
+			TransferredCount++;
 		}
-		if (TransferredCount >= Count) {
-			break;
-		}
-
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTime(&CurrentTime);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], TransferredCount - Count);
-
-			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s timeout (Count: %d, transferred %d)!\n", __func__, Count, TransferredCount);
-			status = STATUS_IO_TIMEOUT;
-			goto out;
-		}
-
-		LARGE_INTEGER Timeout;
-		Timeout.QuadPart = -10 * 100;
-		KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
 	}
 
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
+	if (TransferredCount < Count) {
+		InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], TransferredCount - Count);
+
+		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s timeout (Count: %d, transferred %d)!\n", __func__, Count, TransferredCount);
+		status = STATUS_IO_TIMEOUT;
+		goto out;
+	}
 
 out:
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
 	return status;
 }
 
@@ -60,7 +42,8 @@ void HDA_AsyncWait(WDFWORKITEM WorkItem) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, workItemContext->Count);
 
 	NTSTATUS status = HDA_WaitForTransfer(
-		workItemContext->devData,
+		workItemContext->devData->FdoContext,
+		workItemContext->devData->CodecIds.CodecAddress,
 		workItemContext->Count,
 		workItemContext->CodecTransfer
 	);
@@ -135,7 +118,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 		WdfWorkItemEnqueue(workItem);
 	}
 	else {
-		status = HDA_WaitForTransfer(devData, Count, CodecTransfer);
+		status = HDA_WaitForTransfer(fdoCtx, devData->CodecIds.CodecAddress, Count, CodecTransfer);
 		if (!NT_SUCCESS(status)) {
 			goto out;
 		}

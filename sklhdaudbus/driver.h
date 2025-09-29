@@ -47,6 +47,13 @@ extern "C" {
 
 #include "regfuncs.h"
 
+NTSTATUS HDA_WaitForTransfer(
+	PFDO_CONTEXT fdoCtx,
+	UINT16 codecAddr,
+	_In_ ULONG Count,
+	_Inout_updates_(Count)
+	PHDAUDIO_CODEC_TRANSFER CodecTransfer
+);
 HDAUDIO_BUS_INTERFACE HDA_BusInterface(PVOID Context);
 HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context);
 HDAUDIO_BUS_INTERFACE_V3 HDA_BusInterfaceV3(PVOID Context);
