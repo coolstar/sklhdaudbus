@@ -1,19 +1,12 @@
 #include "driver.h"
 
 NTSTATUS HDA_WaitForTransfer(
-	PPDO_DEVICE_DATA devData,
+	PFDO_CONTEXT fdoCtx,
+	UINT16 codecAddr,
 	_In_ ULONG Count,
 	_Inout_updates_(Count)
 	PHDAUDIO_CODEC_TRANSFER CodecTransfer
 ) {
-	if (!devData->FdoContext) {
-		return STATUS_NO_SUCH_DEVICE;
-	}
-
-	PFDO_CONTEXT fdoCtx = devData->FdoContext;
-
-	UINT16 codecAddr = (UINT16)devData->CodecIds.CodecAddress;
-
 	NTSTATUS status = STATUS_SUCCESS;
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, Count);
@@ -21,9 +14,14 @@ NTSTATUS HDA_WaitForTransfer(
 	int timeout_ms = 1000;
 	LARGE_INTEGER StartTime;
 	KeQuerySystemTime(&StartTime);
+
+	ULONG TransferredCount = 0;
 	for (ULONG loopcounter = 0; ; loopcounter++) {
-		ULONG TransferredCount = 0;
-		for (ULONG i = 0; i < Count; i++) {
+		LARGE_INTEGER Timeout;
+		Timeout.QuadPart = -10 * 100;
+		KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
+
+		for (ULONG i = TransferredCount; i < Count; i++) {
 			if (CodecTransfer[i].Input.IsValid) {
 				TransferredCount++;
 			}
@@ -42,10 +40,6 @@ NTSTATUS HDA_WaitForTransfer(
 			status = STATUS_IO_TIMEOUT;
 			goto out;
 		}
-
-		LARGE_INTEGER Timeout;
-		Timeout.QuadPart = -10 * 100;
-		KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
 	}
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
@@ -60,7 +54,8 @@ void HDA_AsyncWait(WDFWORKITEM WorkItem) {
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, workItemContext->Count);
 
 	NTSTATUS status = HDA_WaitForTransfer(
-		workItemContext->devData,
+		workItemContext->devData->FdoContext,
+		workItemContext->devData->CodecIds.CodecAddress,
 		workItemContext->Count,
 		workItemContext->CodecTransfer
 	);
@@ -135,7 +130,7 @@ NTSTATUS HDA_TransferCodecVerbs(
 		WdfWorkItemEnqueue(workItem);
 	}
 	else {
-		status = HDA_WaitForTransfer(devData, Count, CodecTransfer);
+		status = HDA_WaitForTransfer(fdoCtx, devData->CodecIds.CodecAddress, Count, CodecTransfer);
 		if (!NT_SUCCESS(status)) {
 			goto out;
 		}

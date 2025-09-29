@@ -256,36 +256,14 @@ NTSTATUS RunSingleHDACmd(PFDO_CONTEXT fdoCtx, ULONG val, ULONG* res) {
 		return status;
 	}
 
-	LARGE_INTEGER StartTime;
-	KeQuerySystemTime(&StartTime);
 
-	int timeout_ms = 1000;
-	for (ULONG loopcounter = 0; ; loopcounter++) {
-		if (transfer.Input.IsValid) {
-			if (res) {
-				*res = transfer.Input.Response;
-			}
-			return STATUS_SUCCESS;
-		}
+	UINT16 addr = HDACommandAddr(transfer.Output.Command);
+	status = HDA_WaitForTransfer(fdoCtx, addr, 1, &transfer);
 
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTime(&CurrentTime);
-
-		UINT16 addr = HDACommandAddr(transfer.Output.Command);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			WdfInterruptAcquireLock(fdoCtx->Interrupt);
-			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
-			WdfInterruptReleaseLock(fdoCtx->Interrupt);
-			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
-				"%s: Timed out waiting for response\n", __func__);
-			return STATUS_IO_TIMEOUT;
-		}
-
-		LARGE_INTEGER Timeout;
-		Timeout.QuadPart = -10 * 100;
-		KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[addr], Executive, KernelMode, TRUE, &Timeout);
+	if (transfer.Input.IsValid && res) {
+		*res = transfer.Input.Response;
 	}
+	return status;
 }
 
 #define HDA_RIRB_EX_UNSOL_EV	(1<<4)
