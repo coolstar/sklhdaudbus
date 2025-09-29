@@ -332,9 +332,10 @@ static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
 			
 			RtlMoveMemory(&codecXfer->xfer[0], &codecXfer->xfer[1], sizeof(PHDAUDIO_CODEC_TRANSFER) * (HDA_MAX_CORB_ENTRIES - 1));
 			codecXfer->xfer[HDA_MAX_CORB_ENTRIES - 1] = NULL;
-			InterlockedDecrement(&fdoCtx->rirb.cmds[addr]);
-
-			KeSetEvent(&fdoCtx->rirb.xferEvent[addr], IO_NO_INCREMENT, FALSE);
+			if (!InterlockedDecrement(&fdoCtx->rirb.cmds[addr])) {
+				SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Empty queue for 0x%x\n", addr);
+				KeSetEvent(&fdoCtx->rirb.xferEvent[addr], IO_NO_INCREMENT, FALSE);
+			}
 		}
 		else {
 			SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,

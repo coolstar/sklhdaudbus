@@ -11,40 +11,28 @@ NTSTATUS HDA_WaitForTransfer(
 
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, Count);
 
-	int timeout_ms = 1000;
-	LARGE_INTEGER StartTime;
-	KeQuerySystemTime(&StartTime);
+	LARGE_INTEGER Timeout;
+	Timeout.QuadPart = -10 * 1000 * 1000;
+	KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
+	KeClearEvent(&fdoCtx->rirb.xferEvent[codecAddr]);
 
 	ULONG TransferredCount = 0;
-	for (ULONG loopcounter = 0; ; loopcounter++) {
-		LARGE_INTEGER Timeout;
-		Timeout.QuadPart = -10 * 100;
-		KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
-
-		for (ULONG i = TransferredCount; i < Count; i++) {
-			if (CodecTransfer[i].Input.IsValid) {
-				TransferredCount++;
-			}
-		}
-		if (TransferredCount >= Count) {
-			break;
-		}
-
-		LARGE_INTEGER CurrentTime;
-		KeQuerySystemTime(&CurrentTime);
-
-		if (((CurrentTime.QuadPart - StartTime.QuadPart) / (10 * 1000)) >= timeout_ms) {
-			InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], TransferredCount - Count);
-
-			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s timeout (Count: %d, transferred %d)!\n", __func__, Count, TransferredCount);
-			status = STATUS_IO_TIMEOUT;
-			goto out;
+	for (ULONG i = 0; i < Count; i++) {
+		if (CodecTransfer[i].Input.IsValid) {
+			TransferredCount++;
 		}
 	}
 
-	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
+	if (TransferredCount < Count) {
+		InterlockedAdd(&fdoCtx->rirb.cmds[codecAddr], TransferredCount - Count);
+
+		SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s timeout (Count: %d, transferred %d)!\n", __func__, Count, TransferredCount);
+		status = STATUS_IO_TIMEOUT;
+		goto out;
+	}
 
 out:
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s exit (Count: %d)!\n", __func__, Count);
 	return status;
 }
 
