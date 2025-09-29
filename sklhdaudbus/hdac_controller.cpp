@@ -297,6 +297,7 @@ static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
 			HDAUDIO_CODEC_RESPONSE response;
 			RtlZeroMemory(&response, sizeof(HDAUDIO_CODEC_RESPONSE));
 
+			response.SDataIn = addr;
 			response.Response = rirb.response;
 			response.IsUnsolicitedResponse = 1;
 			response.IsValid = 1;
@@ -319,6 +320,7 @@ static void HDAFlushRIRB(PFDO_CONTEXT fdoCtx) {
 			if (codecXfer->xfer[0]) {
 				SklHdAudBusPrint(DEBUG_LEVEL_ERROR, DBG_IOCTL,
 					"Got response for 0x%x: 0x%x\n", codecXfer->xfer[0]->Output.Command, rirb.response);
+				codecXfer->xfer[0]->Input.SDataIn = addr;
 				codecXfer->xfer[0]->Input.Response = rirb.response;
 				codecXfer->xfer[0]->Input.IsValid = 1;
 			}
