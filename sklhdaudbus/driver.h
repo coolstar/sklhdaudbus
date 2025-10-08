@@ -57,6 +57,7 @@ NTSTATUS HDA_WaitForTransfer(
 HDAUDIO_BUS_INTERFACE HDA_BusInterface(PVOID Context);
 HDAUDIO_BUS_INTERFACE_V2 HDA_BusInterfaceV2(PVOID Context);
 HDAUDIO_BUS_INTERFACE_V3 HDA_BusInterfaceV3(PVOID Context);
+HDAUDIO_BUS_INTERFACE_BDL HDA_BusInterfaceBDL(PVOID Context);
 
 #define IS_BXT(ven, dev) (ven == VEN_INTEL && dev == 0x5a98)
 
