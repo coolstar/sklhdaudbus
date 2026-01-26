@@ -933,10 +933,12 @@ NTSTATUS HDA_FreeContiguousDmaBuffer(
 
 	RtlZeroMemory(&stream->isr, sizeof(HDAC_ISR_CALLBACK));
 
+	PVOID dmaBuf = stream->dmaBuf;
+	stream->dmaBuf = NULL;
+
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
 
-	MmFreeContiguousMemory(stream->dmaBuf);
-	stream->dmaBuf = NULL;
+	MmFreeContiguousMemory(dmaBuf);
 
 	return STATUS_SUCCESS;
 }
@@ -977,18 +979,20 @@ NTSTATUS HDA_AllocateContiguousDmaBuffer(
     PHYSICAL_ADDRESS maxAddr;
     maxAddr.QuadPart = devData->FdoContext->is64BitOK ? MAXULONG64 : MAXULONG32;
 
-    stream->dmaBuf = MmAllocateContiguousMemory(RequestedBufferSize, maxAddr);
-    if (!stream->dmaBuf) {
+    PVOID dmaBuf = MmAllocateContiguousMemory(RequestedBufferSize, maxAddr);
+    if (!dmaBuf) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
-    RtlZeroMemory(stream->dmaBuf, RequestedBufferSize);
+    RtlZeroMemory(dmaBuf, RequestedBufferSize);
 
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 
-	*DataBuffer = stream->dmaBuf;
-	*BdlBuffer = (PHDAUDIO_BUFFER_DESCRIPTOR)stream->bdl;
+    stream->dmaBuf = dmaBuf;
 
 	WdfInterruptReleaseLock(devData->FdoContext->Interrupt);
+
+	*DataBuffer = stream->dmaBuf;
+	*BdlBuffer = (PHDAUDIO_BUFFER_DESCRIPTOR)stream->bdl;
 
 	return STATUS_SUCCESS;
 }
@@ -1092,8 +1096,8 @@ HDAUDIO_BUS_INTERFACE_BDL HDA_BusInterfaceBDL(PVOID Context)
 	busInterface.Size = sizeof(HDAUDIO_BUS_INTERFACE_BDL);
 	busInterface.Version = 0x0100;
 	busInterface.Context = Context;
-	busInterface.InterfaceReference = (PINTERFACE_REFERENCE)WdfDeviceInterfaceReferenceNoOp;
-	busInterface.InterfaceDereference = (PINTERFACE_DEREFERENCE)WdfDeviceInterfaceDereferenceNoOp;
+	busInterface.InterfaceReference = WdfDeviceInterfaceReferenceNoOp;
+	busInterface.InterfaceDereference = WdfDeviceInterfaceDereferenceNoOp;
 	busInterface.TransferCodecVerbs = HDA_TransferCodecVerbs;
 	busInterface.AllocateCaptureDmaEngine = HDA_AllocateCaptureDmaEngine;
 	busInterface.AllocateRenderDmaEngine = HDA_AllocateRenderDmaEngine;
