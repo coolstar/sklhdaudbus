@@ -12,17 +12,20 @@ EVT_WDF_DEVICE_SELF_MANAGED_IO_INIT Fdo_EvtDeviceSelfManagedIoInit;
 void CheckHDAGraphicsRegistryKeys(PFDO_CONTEXT fdoCtx);
 
 NTSTATUS
+NTAPI
 HDAGraphicsPowerInterfaceCallback(
     PVOID NotificationStruct,
     PVOID Context
 );
 
 NTSTATUS
+NTAPI
 Fdo_Initialize(
     _In_ PFDO_CONTEXT FdoCtx
 );
 
 NTSTATUS
+NTAPI
 Fdo_Create(
 	_Inout_ PWDFDEVICE_INIT DeviceInit
 )
@@ -140,6 +143,7 @@ Exit:
 }
 
 NTSTATUS
+NTAPI
 Fdo_Initialize(
     _In_ PFDO_CONTEXT FdoCtx
 )
@@ -202,6 +206,7 @@ Fdo_Initialize(
 }
 
 NTSTATUS
+NTAPI
 Fdo_EvtDevicePrepareHardware(
     _In_ WDFDEVICE Device,
     _In_ WDFCMRESLIST ResourcesRaw,
@@ -298,7 +303,7 @@ Fdo_EvtDevicePrepareHardware(
                 "HDA capability ID: 0x%x\n",
                 (cur_cap & HDA_CAP_HDR_ID_MASK) >> HDA_CAP_HDR_ID_OFF);
 
-            if (cur_cap == -1) {
+            if (cur_cap == (unsigned int)-1) {
                 SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
                     "Invalid capability reg read\n");
                 break;
@@ -368,19 +373,20 @@ Fdo_EvtDevicePrepareHardware(
     PHYSICAL_ADDRESS maxAddr;
     maxAddr.QuadPart = fdoCtx->is64BitOK ? MAXULONG64 : MAXULONG32;
 
-    fdoCtx->posbuf = MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
+    ULONG size = fdoCtx->is64BitOK ? PAGE_SIZE * 2 : PAGE_SIZE;
+    fdoCtx->posbuf = MmAllocateContiguousMemory(size, maxAddr);
     if (!fdoCtx->posbuf) {
         return STATUS_NO_MEMORY;
     }
 
-    RtlZeroMemory(fdoCtx->posbuf, PAGE_SIZE);
+    RtlZeroMemory(fdoCtx->posbuf, size);
 
-    fdoCtx->rb = (UINT8 *)MmAllocateContiguousMemory(PAGE_SIZE, maxAddr);
+    fdoCtx->rb = (UINT8 *)MmAllocateContiguousMemory(size, maxAddr);
     if (!fdoCtx->rb) {
         return STATUS_NO_MEMORY;
     }
 
-    RtlZeroMemory(fdoCtx->rb, PAGE_SIZE);
+    RtlZeroMemory(fdoCtx->rb, size);
 
     //Init Streams
     {
@@ -475,6 +481,7 @@ Fdo_EvtDevicePrepareHardware(
 }
 
 NTSTATUS
+NTAPI
 Fdo_EvtDeviceReleaseHardware(
     _In_ WDFDEVICE Device,
     _In_ WDFCMRESLIST ResourcesTranslated
@@ -547,6 +554,7 @@ Fdo_EvtDeviceReleaseHardware(
 #define ENABLE_HDA 1
 
 NTSTATUS
+NTAPI
 Fdo_EvtDeviceD0Entry(
     _In_ WDFDEVICE Device,
     _In_ WDF_POWER_DEVICE_STATE PreviousState
@@ -606,6 +614,7 @@ Fdo_EvtDeviceD0Entry(
 }
 
 NTSTATUS
+NTAPI
 Fdo_EvtDeviceD0EntryPostInterrupts(
     _In_ WDFDEVICE Device,
     _In_ WDF_POWER_DEVICE_STATE PreviousState
@@ -646,6 +655,7 @@ Fdo_EvtDeviceD0EntryPostInterrupts(
 }
 
 NTSTATUS
+NTAPI
 Fdo_EvtDeviceD0Exit(
     _In_ WDFDEVICE Device,
     _In_ WDF_POWER_DEVICE_STATE TargetState
@@ -667,6 +677,7 @@ Fdo_EvtDeviceD0Exit(
 }
 
 void
+NTAPI
 Fdo_EnumerateCodec(
     PFDO_CONTEXT fdoCtx,
     UINT8 addr
@@ -759,6 +770,7 @@ Fdo_EnumerateCodec(
 }
 
 NTSTATUS
+NTAPI
 Fdo_EvtDeviceSelfManagedIoInit(
     _In_ WDFDEVICE Device
 )

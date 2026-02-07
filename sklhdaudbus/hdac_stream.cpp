@@ -37,9 +37,6 @@ void hdac_stream_stop(PHDAC_STREAM stream) {
 void hdac_stream_reset(PHDAC_STREAM stream) {
 	hdac_stream_clear(stream);
 
-	UINT8 dma_run_state;
-	dma_run_state = stream_read8(stream, SD_CTL) & SD_CTL_DMA_START;
-
 	stream_update8(stream, SD_CTL, 0, SD_CTL_STREAM_RESET);
 	KeStallExecutionProcessor(3);
 	int timeout = 300;
@@ -169,6 +166,8 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	if (!(hda_read32(stream->FdoContext, DPLBASE) & HDA_DPLBASE_ENABLE)){
 		PHYSICAL_ADDRESS posbufAddr = MmGetPhysicalAddress(stream->FdoContext->posbuf);
 		hda_write32(stream->FdoContext, DPLBASE, posbufAddr.LowPart | HDA_DPLBASE_ENABLE);
+		if (stream->FdoContext->is64BitOK)
+			hda_write32(stream->FdoContext, DPUBASE, posbufAddr.HighPart);
 	}
 
 	/* set the interrupt enable bits in the descriptor control register */
