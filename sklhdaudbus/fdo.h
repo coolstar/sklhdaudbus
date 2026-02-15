@@ -129,6 +129,7 @@ typedef struct _FDO_CONTEXT
     WDFCOLLECTION GraphicsDevicesCollection;
     ULONG GraphicsCodecAddress;
     BOOLEAN UseSGPCCodec;
+    BOOLEAN GraphicsCodecConnected;
 
     UINT8 *mlcap;
     UINT8 *ppcap;

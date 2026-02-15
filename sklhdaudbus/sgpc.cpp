@@ -99,6 +99,8 @@ EjectGraphicsCodec(PFDO_CONTEXT fdoCtx) {
 
     if (!fdoCtx->codecs[fdoCtx->GraphicsCodecAddress])
         return;
+
+    fdoCtx->GraphicsCodecConnected = FALSE;
     
     PDO_IDENTIFICATION_DESCRIPTION description;//
     // Initialize the description with the information about the detected codec.
@@ -131,6 +133,7 @@ EnumerateGraphicsCodec(PFDO_CONTEXT fdoCtx) {
     }
     SklHdAudBusPrint(DEBUG_LEVEL_INFO, DBG_INIT,
         "Enumerating Gfx Codec\n");
+    fdoCtx->GraphicsCodecConnected = TRUE;
     Fdo_EnumerateCodec(fdoCtx, (UINT8)fdoCtx->GraphicsCodecAddress);
 }
 

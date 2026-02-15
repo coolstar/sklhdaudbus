@@ -13,7 +13,7 @@ NTSTATUS HDA_WaitForTransfer(
 
 	LARGE_INTEGER Timeout;
 	Timeout.QuadPart = -10 * 1000 * 1000;
-	KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, TRUE, &Timeout);
+	KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, FALSE, &Timeout);
 	KeClearEvent(&fdoCtx->rirb.xferEvent[codecAddr]);
 
 	ULONG TransferredCount = 0;
@@ -45,7 +45,7 @@ HDA_AsyncWait(WDFWORKITEM WorkItem) {
 
 	NTSTATUS status = HDA_WaitForTransfer(
 		workItemContext->devData->FdoContext,
-		workItemContext->devData->CodecIds.CodecAddress,
+		(UINT16)workItemContext->devData->CodecIds.CodecAddress,
 		workItemContext->Count,
 		workItemContext->CodecTransfer
 	);
@@ -86,6 +86,12 @@ HDA_TransferCodecVerbs(
 	}
 
 	PFDO_CONTEXT fdoCtx = devData->FdoContext;
+	if (devData->CodecIds.IsGraphicsCodec) {
+		if (!fdoCtx->GraphicsCodecConnected) {
+			SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "Gfx codec 0x%x disconnected! Not transferring.\n", devData->CodecIds.CodecAddress);
+			return STATUS_DEVICE_NOT_CONNECTED;
+		}
+	}
 
 	status = WdfDeviceStopIdle(devData->FdoContext->WdfDevice, TRUE);
 	if (!NT_SUCCESS(status)) {
@@ -122,7 +128,7 @@ HDA_TransferCodecVerbs(
 		WdfWorkItemEnqueue(workItem);
 	}
 	else {
-		status = HDA_WaitForTransfer(fdoCtx, devData->CodecIds.CodecAddress, Count, CodecTransfer);
+		status = HDA_WaitForTransfer(fdoCtx, (UINT16)devData->CodecIds.CodecAddress, Count, CodecTransfer);
 		if (!NT_SUCCESS(status)) {
 			goto out;
 		}
@@ -920,7 +926,7 @@ HDA_SetupDmaEngineWithBdl(
 	WdfInterruptAcquireLock(devData->FdoContext->Interrupt);
 
 	stream->bufSz = BufferLength;
-	stream->numBlocks = Lvi;
+	stream->numBlocks = (UINT16)Lvi;
 
 	RtlZeroMemory(&stream->isr, sizeof(HDAC_ISR_CALLBACK));
 	stream->isr.IOC = TRUE;
