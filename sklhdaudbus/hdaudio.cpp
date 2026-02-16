@@ -12,9 +12,11 @@ NTSTATUS HDA_WaitForTransfer(
 	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s called (Count: %d)!\n", __func__, Count);
 
 	LARGE_INTEGER Timeout;
-	Timeout.QuadPart = -10 * 1000 * 1000;
-	KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, FALSE, &Timeout);
+	Timeout.QuadPart = -10LL * 1000LL * 1000LL * (LONGLONG)Count;
+	status = KeWaitForSingleObject(&fdoCtx->rirb.xferEvent[codecAddr], Executive, KernelMode, FALSE, &Timeout);
 	KeClearEvent(&fdoCtx->rirb.xferEvent[codecAddr]);
+
+	SklHdAudBusPrint(DEBUG_LEVEL_VERBOSE, DBG_IOCTL, "%s wait status: 0x%x!\n", __func__, status);
 
 	ULONG TransferredCount = 0;
 	for (ULONG i = 0; i < Count; i++) {
