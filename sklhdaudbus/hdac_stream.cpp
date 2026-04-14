@@ -171,6 +171,5 @@ void hdac_stream_setup(PHDAC_STREAM stream) {
 	/* set the interrupt enable bits in the descriptor control register */
 	stream_update32(stream, SD_CTL, 0, SD_INT_MASK);
 
-	stream->fifoSize = 0;
 	stream->fifoSize = stream_read16(stream, SD_FIFOSIZE) + 1;
 }
