@@ -112,7 +112,7 @@ UINT16 hdac_format(PHDAC_STREAM stream) {
 			return 0;
 		format |= channels - 1;
 
-		switch (stream->streamFormat.ContainerSize) {
+		switch (stream->streamFormat.ValidBitsPerSample) {
 		case 8:
 			format |= AC_FMT_BITS_8;
 			break;
