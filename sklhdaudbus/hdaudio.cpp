@@ -569,7 +569,8 @@ HDA_AllocateDmaBufferWithNotification(
 	UINT32 halfSize = 0;
 	if (NotificationCount == 2) {
 		halfSize = (UINT32)RequestedBufferSize / 2;
-		allocOffset = PAGE_SIZE - (halfSize % PAGE_SIZE);
+		// The second half starts on a page; a page sized half needs no offset
+		allocOffset = (PAGE_SIZE - (halfSize % PAGE_SIZE)) % PAGE_SIZE;
 		allocSize = (UINT32)RequestedBufferSize + allocOffset;
 	}
 
@@ -589,7 +590,8 @@ HDA_AllocateDmaBufferWithNotification(
 
 	{
 		UINT16 numBlocks = 0;
-		UINT16 pageNum = 0;
+		// The buffer starts at allocOffset, the BDL must start at the same page
+		UINT16 pageNum = (UINT16)(allocOffset / PAGE_SIZE);
 
 		//Set up the BDL
 		PHDAC_BDLENTRY bdl = stream->bdl;
