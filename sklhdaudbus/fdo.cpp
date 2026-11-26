@@ -576,6 +576,14 @@ Fdo_EvtDeviceD0Entry(
         pci_read_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, &val);
         val = val & ~INTEL_HDA_CGCTL_MISCBDCGE;
         pci_write_cfg_dword(&fdoCtx->BusInterface, INTEL_HDA_CGCTL, val);
+
+        // Traffic class 0 (TCSEL bits 0-2), other classes cause playback static
+        update_pci_byte(&fdoCtx->BusInterface, HDA_PCIREG_TCSEL, 0x07, 0);
+
+        // The DMA buffers are cached memory, the controller must snoop the CPU caches,
+        // otherwise it plays stale data and the position buffer is not seen updated
+        // (DEVC is 16 bit, NOSNOOP is bit 3 of its upper byte)
+        update_pci_byte(&fdoCtx->BusInterface, INTEL_SCH_HDA_DEVC + 1, (BYTE)(INTEL_SCH_HDA_DEVC_NOSNOOP >> 8), 0);
     }
     else if (fdoCtx->venId == VEN_AMD || fdoCtx->venId == VEN_ATI) {
         update_pci_byte(&fdoCtx->BusInterface, ATI_SB450_HDAUDIO_MISC_CNTR2_ADDR, 0x07, ATI_SB450_HDAUDIO_ENABLE_SNOOP);
